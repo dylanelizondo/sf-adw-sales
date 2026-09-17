@@ -42,9 +42,11 @@ models:
   adw_sales:
     bronze:
       +database: "{{ env_var('DBT_DB_ADW_BRONZE') }}"
-      +schema: SOURCE
       +materialized: view
       +tags: ["bronze"]
+      adventure_works:
+        +schema: ADVENTURE_WORKS
+        +tags: ["adventure_works"]
 
     silver:
       +database: "{{ env_var('DBT_DB_ADW_SILVER') }}"
