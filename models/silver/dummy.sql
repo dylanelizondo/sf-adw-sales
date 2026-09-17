@@ -1,0 +1,1 @@
+select 'alex' as ALEX;
