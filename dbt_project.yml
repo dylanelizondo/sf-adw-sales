@@ -42,7 +42,7 @@ models:
   adw_sales:
     bronze:
       +database: "{{ env_var('DBT_DB_ADW_BRONZE') }}"
-      +schema: SALES
+      +schema: SOURCE
       +materialized: view
       +tags: ["bronze"]
 
