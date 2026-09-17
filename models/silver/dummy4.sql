@@ -1,0 +1,1 @@
+select 'SANTI' as SANTI;

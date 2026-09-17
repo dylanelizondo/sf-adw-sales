@@ -1,17 +1,11 @@
-
-# Name your project! Project names should contain only lowercase characters
-# and underscores. A good package name should reflect your organization's
-# name or the intended use of these models
-name: 'ADW_SALES'
+name: 'adw_sales'
 version: '1.0.0'
 config-version: 2
 
-# This setting configures which "profile" dbt uses for this project.
-profile: 'dev'
+# Nombre del profile. dbt Cloud lo IGNORA (la conexion la toma del environment),
+# pero conviene que coincida con el proyecto para cuando corras dbt local o en CI.
+profile: 'adw_sales'
 
-# These configurations specify where dbt should look for different types of files.
-# The `model-paths` config, for example, states that models in this project can be
-# found in the "models/" directory. You probably won't need to change these!
 model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
@@ -19,24 +13,53 @@ seed-paths: ["seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
-target-path: "target"  # directory which will store compiled SQL files
-clean-targets:         # directories to be removed by `dbt clean`
+target-path: "target"
+clean-targets:
   - "target"
   - "dbt_packages"
 
 
-# Configuring models
-# Full documentation: https://docs.getdbt.com/docs/configuring-models
-
-# In dbt, the default materialization for a model is a view. This means, when you run 
-# dbt run or dbt build, all of your models will be built as a view in your data platform. 
-# The configuration below will override this setting for models in the example folder to 
-# instead be materialized as tables. Any models you add to the root of the models folder will 
-# continue to be built as views. These settings can be overridden in the individual model files
-# using the `{{ config(...) }}` macro.
+# ---------------------------------------------------------------------------
+# Una variable de entorno por CAPA. El valor cambia por environment en dbt Cloud:
+#
+#   Variable              Project default    UAT                Production
+#   DBT_DB_ADW_BRONZE     ADW_BRONZE_DEV     ADW_BRONZE_UAT     ADW_BRONZE_PROD
+#   DBT_DB_ADW_SILVER     ADW_SILVER_DEV     ADW_SILVER_UAT     ADW_SILVER_PROD
+#   DBT_DB_ADW_GOLD       ADW_GOLD_DEV       ADW_GOLD_UAT       ADW_GOLD_PROD
+#
+# A proposito NO llevan valor default en env_var(): si a un job le falta la
+# variable, preferimos que falle en el parseo antes que escribir en DEV
+# silenciosamente. Verificado: "Env var required but not provided".
+#
+# El +schema es el DOMINIO. Este proyecto es solo Sales; finance/marketing
+# viven en sus propios proyectos dbt.
+#
+# En el IDE, macros/generate_schema_name.sql le antepone tu schema personal
+# (DYLAN_SALES) para que nadie se pise. En los jobs queda literal (SALES).
+# ---------------------------------------------------------------------------
 
 models:
-  ADW_SALES:
-    # Applies to all files under models/example/
-    example:
+  adw_sales:
+    bronze:
+      +database: "{{ env_var('DBT_DB_ADW_BRONZE') }}"
+      +schema: SOURCE
+      +materialized: view
+      +tags: ["bronze"]
+
+    silver:
+      +database: "{{ env_var('DBT_DB_ADW_SILVER') }}"
+      +schema: SALES
       +materialized: table
+      +tags: ["silver"]
+
+    gold:
+      +database: "{{ env_var('DBT_DB_ADW_GOLD') }}"
+      +schema: SALES
+      +materialized: view
+      +tags: ["gold"]
+
+    platinum:
+      +database: "{{ env_var('DBT_DB_ADW_PLATINUM') }}"
+      +schema: SALES
+      +materialized: view
+      +tags: ["gold"]
