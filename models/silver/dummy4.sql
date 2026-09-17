@@ -1,1 +1,1 @@
-select 'santi' from SANTI
+select 'santi' from SANTI;
