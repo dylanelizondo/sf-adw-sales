@@ -1,0 +1,1 @@
+select 'manu' as MANU;
