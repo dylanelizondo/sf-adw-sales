@@ -1,1 +1,1 @@
-select 'Chalito' as Chali;
+select 'Chalito' as Chalito;
