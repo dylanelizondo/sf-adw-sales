@@ -1,1 +1,0 @@
-select 'alex' as ALEX;
