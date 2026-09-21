@@ -1,1 +1,0 @@
-select 'Chalito' as Chali;

@@ -1,1 +1,0 @@
-select 'SANTI' as SANTI;
