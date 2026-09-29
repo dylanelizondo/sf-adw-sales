@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__sales_tax_rate
+    description: "Modelo silver de SALES_TAX_RATE. Limpia y tipa los datos crudos de tasas de impuesto, y agrega una etiqueta legible para el tipo de impuesto."
+    columns:
+      - name: sales_tax_rate_id
+        description: "Identificador único de cada tasa de impuesto (llave primaria)."
+        tests:
+          - unique
+          - not_null
+
+      - name: state_province_id
+        description: "Llave foránea hacia el estado/provincia al que aplica esta tasa."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_person__state_province')
+                field: state_province_id
+
+      - name: tax_type_code
+        description: "Código numérico original del tipo de impuesto (1 = solo envío, 2 = solo estado, 3 = envío y estado)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+
+      - name: tax_type_label
+        description: "Descripción legible del tipo de impuesto, generada a partir de tax_type_code."
+
+      - name: tax_rate
+        description: "Porcentaje de la tasa de impuesto."
+        tests:
+          - not_null
+
+      - name: name
+        description: "Nombre descriptivo de la tasa de impuesto."
+
+      - name: modified_date
+        description: "Fecha de última modificación del registro original, convertida a tipo DATE."
+
+      - name: _loaded_at
+        description: "Marca de tiempo de cuándo se cargó esta fila en la capa silver."
+
+      - name: _source_relation
+        description: "Tabla de origen desde la cual se cargó este registro."
