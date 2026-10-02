@@ -1,0 +1,95 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__special_offer
+    description: >
+        Lookup of promotions and discounts, with validity dates and the quantity range they
+        apply to. One row per promotion (16, equal to SALES.SPECIAL_OFFER). Mints
+        special_offer_key from special_offer_id so gold never has to recompute it.
+
+    config:
+      # PRIMARY KEY over special_offer_key, applied as DDL after the table is built. Same
+      # reasoning as slv_adventure_works_sales__store: a `constraints:` block is only
+      # emitted when the model declares `contract: enforced: true`, so without one the key
+      # never reaches Snowflake. Safe to re-run only because this is a table -- every run
+      # issues CREATE OR REPLACE.
+      post_hook:
+        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_adventure_works_sales__special_offer PRIMARY KEY (special_offer_key)"
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: special_offer_key
+        description: >
+            PK. Surrogate key, md5 of special_offer_id, built the same way as the store and
+            person surrogate keys so the construction means the same thing anywhere in the mesh.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: special_offer_id
+        description: "Natural key. PK of SALES.SPECIAL_OFFER."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- identity ----------------------------------------------------------
+      - name: special_offer_description
+        description: "Description of the promotion, for example 'Volume Discount 11 to 14'."
+        data_tests: [not_null]
+
+      - name: special_offer_discount_pct
+        description: "Discount percentage granted by the promotion, as a decimal fraction."
+        data_tests: [not_null]
+
+      - name: special_offer_type
+        description: >
+            Promotion type. Observed values: Volume Discount, Seasonal Discount, Excess
+            Inventory, Discontinued Product, New Product, No Discount.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - "Volume Discount"
+                  - "Seasonal Discount"
+                  - "Excess Inventory"
+                  - "Discontinued Product"
+                  - "New Product"
+                  - "No Discount"
+
+      - name: special_offer_category
+        description: "Audience the promotion targets. Observed values: Reseller, Customer, No Discount."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Reseller", "Customer", "No Discount"]
+
+      # --- validity window -------------------------------------------------
+      - name: special_offer_start_date
+        description: "Date the record became effective. The source lands this as text, so it is cast here."
+        data_tests: [not_null]
+
+      - name: special_offer_end_date
+        description: >
+            Date the record stopped being effective. The source lands this as text, so it is
+            cast here. Documented by the source as nullable while a promotion is still
+            current; every one of the 16 rows currently carries a value.
+
+      # --- quantity range ----------------------------------------------------
+      - name: special_offer_min_qty
+        description: "Minimum quantity for the promotion to apply."
+        data_tests: [not_null]
+
+      - name: special_offer_max_qty
+        description: >
+            Maximum quantity the promotion applies up to. Null when there is no cap: 12 of
+            the 16 promotions have no max_qty.
+
+      # --- audit ---------------------------------------------------------
+      - name: special_offer_modified_date
+        description: >
+            Last change to this promotion in the source system. The source lands this as
+            text, so it is cast here.
+        data_tests: [not_null]
