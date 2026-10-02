@@ -1,0 +1,196 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__sales_order_header
+    description: "Silver model for Sales Order Header transactions. Cleans corrupted order keys, casts numeric and date types, decodes order status and sales channel flags into BI-friendly labels, and provides standard boolean flags. Grain: one row per sales order (sales_order_id)."
+    columns:
+      - name: sales_order_id
+        description: "Primary key. Unique identifier of the sales order header."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - unique
+          - not_null
+
+      - name: revision_number
+        description: "Revision number of the order document. Incremented on order changes."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: order_date
+        description: "Date the order was placed by the customer, cast to DATE."
+        data_type: "DATE"
+        tests:
+          - not_null
+
+      - name: due_date
+        description: "Promised delivery date for the order, cast to DATE."
+        data_type: "DATE"
+        tests:
+          - not_null
+
+      - name: ship_date
+        description: "Date the order was shipped from fulfillment, cast to DATE. Null while unshipped."
+        data_type: "DATE"
+
+      - name: status_code
+        description: "Numeric order status code (1 = In process, 2 = Approved, 3 = Backordered, 4 = Rejected, 5 = Shipped, 6 = Cancelled)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6]
+
+      - name: status_label
+        description: "Descriptive business status label derived from status_code ('In process', 'Approved', 'Backordered', 'Rejected', 'Shipped', 'Cancelled')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['In process', 'Approved', 'Backordered', 'Rejected', 'Shipped', 'Cancelled']
+
+      - name: online_order_flag_code
+        description: "Original binary channel code (1 = Online, 0 = Salesperson)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+
+      - name: is_online_order
+        description: "Boolean indicator for whether the order was placed online (TRUE) vs by a salesperson (FALSE)."
+        data_type: "BOOLEAN"
+        tests:
+          - not_null
+
+      - name: order_channel_label
+        description: "BI-friendly channel label ('Online' or 'Salesperson')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Online', 'Salesperson']
+
+      - name: sales_order_number
+        description: "Formatted sales order reference number displayed to customers (e.g. SO43659)."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: purchase_order_number
+        description: "Customer-assigned purchase order (PO) reference number."
+        data_type: "VARCHAR"
+
+      - name: account_number
+        description: "Financial/accounting account number tied to the sale."
+        data_type: "VARCHAR"
+
+      - name: customer_id
+        description: "Foreign key to the customer that placed the order."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__customer')
+                field: customer_id
+
+      - name: sales_person_id
+        description: "Foreign key to the sales representative assigned to the order. Null for self-service online orders."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_person')
+                field: business_entity_id
+
+      - name: territory_id
+        description: "Foreign key to the sales territory responsible for the sale."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_territory')
+                field: territory_id
+
+      - name: bill_to_address_id
+        description: "Foreign key to the customer billing address."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_person__address')
+                field: address_id
+
+      - name: ship_to_address_id
+        description: "Foreign key to the customer shipping destination address."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_person__address')
+                field: address_id
+
+      - name: ship_method_id
+        description: "Foreign key to the carrier shipping method selected."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: credit_card_id
+        description: "Foreign key to the payment credit card record. Null for terms/invoice payments."
+        data_type: "NUMBER(38,0)"
+
+      - name: credit_card_approval_code
+        description: "Electronic payment processor transaction authorization code."
+        data_type: "VARCHAR"
+
+      - name: currency_rate_id
+        description: "Foreign key to currency exchange rate for international transactions. Null for base currency."
+        data_type: "NUMBER(38,0)"
+
+      - name: sub_total
+        description: "Net sum of line items before tax and shipping fees."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: tax_amt
+        description: "Tax amount charged on the order."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: freight
+        description: "Shipping/freight charges for the order."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: total_due
+        description: "Total invoice payable amount (sub_total + tax_amt + freight). Verified by assert_header_total_due_reconciles."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: rowguid
+        description: "Globally unique identifier (GUID) used by the source system for row-level replication."
+        data_type: "VARCHAR"
+
+      - name: modified_date
+        description: "Last modification date of the source record, cast to DATE."
+        data_type: "DATE"
+
+      - name: _loaded_at
+        description: "Audit timestamp of when this row was processed and loaded into the silver layer."
+        data_type: "TIMESTAMP_LTZ"
+
+      - name: _source_relation
+        description: "Source table reference path for data lineage tracking."
+        data_type: "VARCHAR"
