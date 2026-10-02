@@ -1,0 +1,84 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__collision_tracker
+    description: "Silver model for Collision Incident Tracking. Cleans and casts keys, standardizes incident timestamps/dates, severity, status, and related vehicle/personnel foreign keys. Grain: one row per collision incident (collision_tracker_id)."
+    columns:
+      - name: collision_tracker_id
+        description: "Primary key. Unique identifier of the collision incident record."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - unique
+          - not_null
+
+      - name: vehicle_id
+        description: "Foreign key to the vehicle involved in the collision."
+        data_type: "NUMBER(38,0)"
+
+      - name: sales_person_id
+        description: "Foreign key to the sales representative involved in or reporting the incident."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_person')
+                field: business_entity_id
+
+      - name: territory_id
+        description: "Foreign key to the sales territory where the incident occurred."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_territory')
+                field: territory_id
+
+      - name: incident_date
+        description: "Date the collision incident occurred, cast to DATE."
+        data_type: "DATE"
+        tests:
+          - not_null
+
+      - name: collision_type
+        description: "Classification or nature of the collision incident."
+        data_type: "VARCHAR"
+
+      - name: severity
+        description: "Severity level of the collision (e.g. Minor, Moderate, Severe, Fatal)."
+        data_type: "VARCHAR"
+
+      - name: status
+        description: "Current tracking/workflow status of the incident (e.g. Open, Under Review, Closed, Resolved)."
+        data_type: "VARCHAR"
+
+      - name: description
+        description: "Detailed description of the collision event and circumstances."
+        data_type: "VARCHAR"
+
+      - name: police_report_number
+        description: "Official police or regulatory incident report reference number."
+        data_type: "VARCHAR"
+
+      - name: estimated_cost
+        description: "Estimated financial damage or repair cost."
+        data_type: "NUMBER(19,4)"
+
+      - name: actual_cost
+        description: "Actual final cost incurred from the collision."
+        data_type: "NUMBER(19,4)"
+
+      - name: rowguid
+        description: "Globally unique identifier (GUID) used by the source system for row-level replication."
+        data_type: "VARCHAR"
+
+      - name: modified_date
+        description: "Last modification date of the source record, cast to DATE."
+        data_type: "DATE"
+
+      - name: _loaded_at
+        description: "Audit timestamp of when this row was processed and loaded into the silver layer."
+        data_type: "TIMESTAMP_LTZ"
+
+      - name: _source_relation
+        description: "Source table reference path for data lineage tracking."
+        data_type: "VARCHAR"

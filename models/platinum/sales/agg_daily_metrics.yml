@@ -1,0 +1,233 @@
+version: 2
+
+models:
+  - name: agg_daily_sales_performance
+    description: "Platinum pre-aggregated summary table for daily sales performance across sales territories, salespersons, and sales channels. Optimized for executive dashboards and daily KPI tracking."
+    columns:
+      - name: order_date
+        description: "Primary grain dimension: Order placement date."
+        data_type: "DATE"
+        tests:
+          - not_null
+
+      - name: territory_id
+        description: "Sales territory identifier (-1 for unassigned)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: sales_person_id
+        description: "Salesperson identifier (-1 for unassigned/online)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: is_online_order
+        description: "Boolean indicator for online vs direct salesperson sales."
+        data_type: "BOOLEAN"
+        tests:
+          - not_null
+
+      - name: order_channel_label
+        description: "Descriptive sales channel label ('Online' or 'Salesperson')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: order_status_label
+        description: "Order status description."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: total_orders_count
+        description: "Distinct count of sales orders placed."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: distinct_customers_count
+        description: "Count of unique purchasing customers."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: total_line_items_count
+        description: "Total line items ordered across all orders."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: total_units_sold_count
+        description: "Total sum of product units sold."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: gross_revenue_amount
+        description: "Total gross sales revenue before promotional discounts."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: total_discount_amount
+        description: "Total promotional discount deductions."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: net_revenue_amount
+        description: "Total net sales revenue (gross minus discounts)."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: total_tax_amount
+        description: "Total tax amount levied."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: total_freight_amount
+        description: "Total shipping/freight charges."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: total_gross_payable_amount
+        description: "Total payable gross invoice amount including tax and freight."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: average_order_value_amount
+        description: "Average Order Value (AOV): net_revenue_amount / total_orders_count."
+        data_type: "NUMBER(19,4)"
+
+      - name: average_units_per_order
+        description: "Average unit quantity per order: total_units_sold_count / total_orders_count."
+        data_type: "NUMBER(19,2)"
+
+      - name: average_discount_rate
+        description: "Effective average discount rate across all orders."
+        data_type: "NUMBER(19,4)"
+
+      - name: _loaded_at
+        description: "Timestamp when this record was generated in Platinum layer."
+        data_type: "TIMESTAMP_LTZ"
+
+  - name: agg_daily_safety_incidents
+    description: "Platinum pre-aggregated summary table tracking daily workplace and fleet safety metrics, incident frequencies, days lost, and financial liability by territory."
+    columns:
+      - name: incident_date
+        description: "Date of recorded incidents."
+        data_type: "DATE"
+        tests:
+          - not_null
+
+      - name: territory_id
+        description: "Sales territory identifier (-1 for unassigned)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: sales_person_id
+        description: "Salesperson identifier (-1 for unassigned)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: injury_severity
+        description: "Severity category of injury."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: incident_status
+        description: "Current incident resolution status."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: total_incidents_count
+        description: "Total count of safety/injury incidents recorded."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: collision_related_incidents_count
+        description: "Count of incidents involving a vehicle collision."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: hospitalized_incidents_count
+        description: "Count of incidents requiring hospitalization."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: total_days_lost_count
+        description: "Sum of lost working days."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: total_medical_cost_amount
+        description: "Total direct medical costs incurred."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: total_claim_amount
+        description: "Total claim amounts filed."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: total_collision_cost_amount
+        description: "Total vehicle repair and damage costs."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: total_incident_cost_amount
+        description: "Combined financial liability across injuries and collisions."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: average_days_lost_per_incident
+        description: "Average days lost per incident."
+        data_type: "NUMBER(19,2)"
+
+      - name: average_cost_per_incident_amount
+        description: "Average financial cost per incident."
+        data_type: "NUMBER(19,4)"
+
+      - name: _loaded_at
+        description: "Timestamp when this record was generated in Platinum layer."
+        data_type: "TIMESTAMP_LTZ"
+
+exposures:
+  - name: executive_sales_dashboard
+    type: dashboard
+    maturity: high
+    description: "Executive and Sales Leadership BI Dashboard tracking daily revenue, AOV, order volume, channel performance, and territory trends."
+    depends_on:
+      - ref('agg_daily_sales_performance')
+      - ref('fct_sales_orders')
+    owner:
+      name: "Sales Analytics Team"
+      email: "sales-analytics@adventure-works.com"
+
+  - name: fleet_and_workplace_safety_dashboard
+    type: dashboard
+    maturity: high
+    description: "Operations & HR Safety Dashboard monitoring incident frequency, collision damages, medical liability, and lost workdays across sales territories."
+    depends_on:
+      - ref('agg_daily_safety_incidents')
+      - ref('fct_safety_incidents')
+    owner:
+      name: "EHS & Safety Operations Team"
+      email: "safety@adventure-works.com"
