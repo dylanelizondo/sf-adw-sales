@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__sales_tax_rate
+    description: "Silver model for SALES_TAX_RATE. Cleans and types the raw tax rate data, and adds a human-readable label for the tax type."
+    columns:
+      - name: sales_tax_rate_id
+        description: "Unique identifier for each tax rate (primary key)."
+        tests:
+          - unique
+          - not_null
+
+      - name: state_province_id
+        description: "Foreign key to the state/province this tax rate applies to."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_person__state_province')
+                field: state_province_id
+
+      - name: tax_type_code
+        description: "Original numeric code for the tax type (1 = shipping only, 2 = state only, 3 = shipping and state)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+
+      - name: tax_type_label
+        description: "Human-readable description of the tax type, derived from tax_type_code."
+
+      - name: tax_rate
+        description: "Tax rate percentage."
+        tests:
+          - not_null
+
+      - name: name
+        description: "Descriptive name of the tax rate."
+
+      - name: modified_date
+        description: "Last modification date of the original record, cast to DATE type."
+
+      - name: _loaded_at
+        description: "Timestamp of when this row was loaded into the silver layer."
+
+      - name: _source_relation
+        description: "Source table this record was loaded from."
