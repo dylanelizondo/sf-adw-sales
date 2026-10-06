@@ -1,0 +1,123 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__store
+    description: >
+        Reseller stores that buy from AdventureWorks, with the salesperson who serves each
+        one. One row per store (701, equal to SALES.STORE). Mints store_key from
+        business_entity_id and shreds the StoreSurvey demographics XML (answered by every
+        store) into typed store_* columns so gold doesn't carry XML parsing.
+
+    config:
+      # PRIMARY KEY over store_key, applied as DDL after the table is built. Same reasoning
+      # as adw_core's slv_person: a `constraints:` block is only emitted when the model
+      # declares `contract: enforced: true`, so without one the key never reaches Snowflake.
+      # Safe to re-run only because this is a table -- every run issues CREATE OR REPLACE.
+      post_hook:
+        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_adventure_works_sales__store PRIMARY KEY (store_key)"
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: store_key
+        description: >
+            PK. Surrogate key, md5 of business_entity_id, built the same way as adw_core's
+            person_key so the construction means the same thing anywhere in the mesh.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: business_entity_id
+        description: >
+            Natural key. PK of SALES.STORE and FK to PERSON.BUSINESS_ENTITY, the universal
+            identifier shared across the AdventureWorks party model.
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_person__business_entity')
+                field: business_entity_id
+
+      # --- identity ----------------------------------------------------------
+      - name: store_name
+        description: "Name of the reseller store. Not unique: 2 pairs of stores share a name."
+        data_tests: [not_null]
+
+      - name: sales_person_id
+        description: "FK to the salesperson who serves this store."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_person')
+                field: business_entity_id
+
+      # --- demographics: StoreSurvey XML, shredded ----------------------------
+      # Every one of the 701 stores answered the survey (confirmed non-null), so unlike
+      # adw_core's person survey these columns carry no "never surveyed" null case.
+      - name: store_annual_sales
+        description: "Self-reported annual sales in dollars."
+        data_tests: [not_null]
+
+      - name: store_annual_revenue
+        description: "Self-reported annual revenue in dollars."
+        data_tests: [not_null]
+
+      - name: store_bank_name
+        description: "Self-reported bank used by the store."
+        data_tests: [not_null]
+
+      - name: store_business_type
+        description: >
+            Self-reported business type code as delivered by the source: BM, OS or BS.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BM", "OS", "BS"]
+
+      - name: store_year_opened
+        description: "Year the store opened. Observed range 1970-2001."
+        data_tests: [not_null]
+
+      - name: store_specialty
+        description: "Self-reported product specialty."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Road", "Mountain", "Touring"]
+
+      - name: store_square_feet
+        description: "Self-reported store size in square feet."
+        data_tests: [not_null]
+
+      - name: store_brand_count
+        description: >
+            Self-reported number of brands carried, as text. NOT numeric: the source value
+            "4+" sits alongside "2" and "3" and an AdventureWorks-exclusive "AW", so this is
+            never cast.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["2", "3", "4+", "AW"]
+
+      - name: store_internet_connection_type
+        description: "Self-reported internet connection type: ISDN, DSL, T1, T2 or T3."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["ISDN", "DSL", "T1", "T2", "T3"]
+
+      - name: store_number_employees
+        description: "Self-reported employee count."
+        data_tests: [not_null]
+
+      # --- audit ---------------------------------------------------------
+      - name: store_modified_date
+        description: >
+            Last change to this store in the source system. The source lands this as text,
+            so it is cast here.

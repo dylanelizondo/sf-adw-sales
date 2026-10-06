@@ -1,0 +1,99 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__sales_territory_history
+    description: >
+        Silver table over ADVENTURE_WORKS.SALES.SALES_TERRITORY_HISTORY. One row per
+        salesperson + territory + start_date (composite key). Full assignment history
+        of salespeople to territories. The table is an open SCD2: 13 of 17 rows have
+        a NULL end_date, meaning the assignment is still active. is_current_assignment
+        surfaces this flag explicitly so consumers avoid ambiguous IS NULL checks.
+        No rows are synthesised or closed here; point-in-time snapshots belong in gold.
+
+    config:
+      access: public
+      group: it_adventure_works
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["calfarol"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales Territory"
+            - "Sales Person"
+          readme: |
+            # slv_adventure_works_sales__sales_territory_history
+
+            Silver table over ADVENTURE_WORKS.SALES.SALES_TERRITORY_HISTORY. One row per
+            salesperson + territory + start_date. Full assignment history of salespeople
+            to territories. Open SCD2: 13 of 17 rows have NULL end_date (current assignment).
+            is_current_assignment surfaces this flag explicitly.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | BUSINESS_ENTITY_ID | Part of composite PK. FK to slv_sales_person. |
+            | TERRITORY_ID | Part of composite PK. FK to slv_sales_territory. |
+            | START_DATE | Part of composite PK. Date the salesperson took over the territory. |
+            | END_DATE | Date the salesperson left the territory. NULL = current assignment. |
+            | IS_CURRENT_ASSIGNMENT | True when end_date is NULL. |
+            | ROWGUID | Source GUID for replication traceability. |
+            | SALES_TERRITORY_HISTORY_MODIFIED_DATE | Last change timestamp, cast to TIMESTAMP_NTZ. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            columns: [business_entity_id, territory_id, start_date]
+
+    columns:
+
+      - name: business_entity_id
+        description: >
+            Part of the composite PK. FK to slv_sales_person (business_entity_id).
+            The salesperson assigned to the territory.
+        data_tests:
+          - not_null
+
+      - name: territory_id
+        description: >
+            Part of the composite PK. FK to slv_sales_territory. The territory the
+            salesperson was assigned to.
+        data_tests:
+          - not_null
+
+      - name: start_date
+        description: >
+            Part of the composite PK. Date the salesperson took over the territory.
+            Cast from text to DATE.
+        data_tests:
+          - not_null
+
+      - name: end_date
+        description: >
+            Date the salesperson left the territory. NULL for the current assignment
+            (13 of 17 rows in the source). Cast from text to DATE.
+
+      - name: is_current_assignment
+        description: >
+            True when end_date is NULL, meaning the salesperson is still assigned to
+            this territory. Derived here to avoid re-deriving an IS NULL check downstream.
+        data_tests:
+          - not_null
+
+      - name: rowguid
+        description: >
+            Globally unique identifier (GUID) used by the source system for row-level
+            replication. Surfaced for lineage traceability; not used as a key.
+
+      # --- audit ---------------------------------------------------------
+      - name: sales_territory_history_modified_date
+        description: >
+            Timestamp of the last change to the record in the source system.
+            Cast from text to TIMESTAMP_NTZ.

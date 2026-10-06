@@ -1,0 +1,89 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__sales_reason
+    description: >
+        Silver table over ADVENTURE_WORKS.SALES.SALES_REASON. One row per reason.
+        Lookup of the reasons a customer gave for a purchase, grouped by reason_type.
+        Referenced by slv_sales_order_header_sales_reason. The source columns arrive
+        without separators (SALESREASONID, REASONTYPE, MODIFIEDDATE); this model
+        renames them to snake_case — that alignment happens once here, not in bronze.
+
+    config:
+      access: public
+      group: it_adventure_works
+      post_hook:
+        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_sales_reason PRIMARY KEY (sales_reason_key)"
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["calfarol"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales Reason"
+          readme: |
+            # slv_adventure_works_sales__sales_reason
+
+            Silver table over ADVENTURE_WORKS.SALES.SALES_REASON. One row per reason.
+            Lookup of purchase reasons grouped by reason_type. Source columns arrive without
+            separators (SALESREASONID, REASONTYPE, MODIFIEDDATE); this model aligns them
+            to snake_case — that rename happens here and only here.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | SALES_REASON_KEY | PK. Surrogate key, md5 of sales_reason_id. |
+            | SALES_REASON_ID | Natural key. Source column SALESREASONID. |
+            | SALES_REASON_NAME | Name of the reason (e.g. Price, Quality). Source column NAME. |
+            | REASON_TYPE | Grouping: Marketing, Other, Promotion. Source column REASONTYPE. |
+            | SALES_REASON_MODIFIED_DATE | Last change timestamp, cast to TIMESTAMP_NTZ. Source column MODIFIEDDATE. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ----------------------------------------------------------
+      - name: sales_reason_key
+        description: >
+            PK. Surrogate key, md5 of sales_reason_id. Inherited by gold dimensions.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: sales_reason_id
+        description: >
+            Natural key. Source column SALESREASONID, renamed to snake_case.
+            Unique identifier of the sales reason.
+        data_tests:
+          - unique
+          - not_null
+
+      # --- attributes ----------------------------------------------------
+      - name: sales_reason_name
+        description: >
+            Name of the reason (e.g. Price, Quality, Manufacturer). Source column NAME,
+            prefixed to avoid collision with the SQL reserved word in downstream queries.
+        data_tests:
+          - not_null
+
+      - name: reason_type
+        description: >
+            Grouping the reason belongs to. Source column REASONTYPE, renamed to
+            snake_case. Known values: Marketing, Other, Promotion.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Marketing", "Other", "Promotion"]
+
+      # --- audit ---------------------------------------------------------
+      - name: sales_reason_modified_date
+        description: >
+            Timestamp of the last change to the record in the source system.
+            Source column MODIFIEDDATE, renamed to snake_case and cast from text
+            to TIMESTAMP_NTZ.
