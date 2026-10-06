@@ -2,8 +2,8 @@ name: 'adw_sales'
 version: '1.0.0'
 config-version: 2
 
-# Nombre del profile. dbt Cloud lo IGNORA (la conexion la toma del environment),
-# pero conviene que coincida con el proyecto para cuando corras dbt local o en CI.
+# Profile name. dbt Cloud IGNORES this (the connection comes from the environment),
+# but it should match the project name for when you run dbt locally or in CI.
 profile: 'adw_sales'
 
 model-paths: ["models"]
@@ -20,46 +20,62 @@ clean-targets:
 
 
 # ---------------------------------------------------------------------------
-# Una variable de entorno por CAPA. El valor cambia por environment en dbt Cloud:
+# One environment variable per LAYER. The value changes per environment in dbt Cloud:
 #
 #   Variable              Project default    UAT                Production
 #   DBT_DB_ADW_BRONZE     ADW_BRONZE_DEV     ADW_BRONZE_UAT     ADW_BRONZE_PROD
 #   DBT_DB_ADW_SILVER     ADW_SILVER_DEV     ADW_SILVER_UAT     ADW_SILVER_PROD
 #   DBT_DB_ADW_GOLD       ADW_GOLD_DEV       ADW_GOLD_UAT       ADW_GOLD_PROD
 #
-# A proposito NO llevan valor default en env_var(): si a un job le falta la
-# variable, preferimos que falle en el parseo antes que escribir en DEV
-# silenciosamente. Verificado: "Env var required but not provided".
+# On purpose, these do NOT carry a default value in env_var(): if a job is
+# missing the variable, we'd rather it fail at parse time than silently write
+# to DEV. Verified: "Env var required but not provided".
 #
-# El +schema es el DOMINIO. Este proyecto es solo Sales; finance/marketing
-# viven en sus propios proyectos dbt.
+# +schema is the DOMAIN. This project is Sales only; finance/marketing live
+# in their own dbt projects.
 #
-# En el IDE, macros/generate_schema_name.sql le antepone tu schema personal
-# (DYLAN_SALES) para que nadie se pise. En los jobs queda literal (SALES).
+# In the IDE, macros/generate_schema_name.sql prefixes your personal schema
+# (DYLAN_SALES) so nobody steps on anyone else. In jobs it stays literal (SALES).
 # ---------------------------------------------------------------------------
 
 models:
   adw_sales:
+    # Pushes the descriptions from the .yml files to Snowflake as COMMENTs. Without
+    # this, dbt only keeps them in the manifest and the tables end up with no
+    # comment in the database.
+    #   relation -> COMMENT on the table/view
+    #   columns  -> COMMENT on each column
+    +persist_docs:
+      relation: true
+      columns: true
+
     bronze:
       +database: "{{ env_var('DBT_DB_ADW_BRONZE') }}"
       +schema: SOURCE
       +materialized: view
       +tags: ["bronze"]
 
+    # +group points at the group declared in models/__groups.yml (dbt ignores a
+    # groups: block placed here). No +access: the default is "protected", which
+    # already limits ref to this project. Once gold needs to be consumed from
+    # another project via dbt Mesh, add +access: public there.
     silver:
       +database: "{{ env_var('DBT_DB_ADW_SILVER') }}"
       +schema: SALES
       +materialized: table
       +tags: ["silver"]
+      +group: sales_adventure_works
 
     gold:
       +database: "{{ env_var('DBT_DB_ADW_GOLD') }}"
       +schema: SALES
       +materialized: view
       +tags: ["gold"]
+      +group: sales_adventure_works
 
     platinum:
       +database: "{{ env_var('DBT_DB_ADW_PLATINUM') }}"
       +schema: SALES
       +materialized: view
       +tags: ["gold"]
+      +group: sales_adventure_works
