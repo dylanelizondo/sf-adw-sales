@@ -3,7 +3,7 @@
 --
 -- CURRENCY_RATE_DATE is the day the rate applies to, and in the source it is the day the
 -- referencing order was placed. That alignment is broken today -- see the model description
--- in slv_sales__currency_rate.yml before using this table for currency conversion.
+-- in slv_adventure_works_sales__currency_rate.yml before using this table for currency conversion.
 
 with source as (
 
