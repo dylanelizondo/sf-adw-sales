@@ -78,7 +78,8 @@ models:
         data_tests:
           - not_null
           - accepted_values:
-              values: ["Marketing", "Other", "Promotion"]
+              arguments:
+                values: ["Marketing", "Other", "Promotion"]
 
       # --- audit ---------------------------------------------------------
       - name: sales_reason_modified_date

@@ -71,8 +71,9 @@ models:
             Null when the customer is a store (customer_type = STORE).
         data_tests:
           - relationships:
-              to: ref('adw_core', 'brz_adventure_works_person__person')
-              field: business_entity_id
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_person__person')
+                field: business_entity_id
 
       - name: store_id
         description: >
@@ -80,16 +81,18 @@ models:
             Null when the customer is an individual (customer_type = INDIVIDUAL).
         data_tests:
           - relationships:
-              to: ref('adw_core', 'brz_adventure_works_sales__store')
-              field: business_entity_id
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__store')
+                field: business_entity_id
 
       - name: territory_id
         description: "FK to slv_sales_territory. Sales territory this customer belongs to."
         data_tests:
           - not_null
           - relationships:
-              to: ref('adw_core', 'brz_adventure_works_sales__sales_territory')
-              field: territory_id
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_territory')
+                field: territory_id
 
       # --- derived -------------------------------------------------------
       - name: customer_type
@@ -100,7 +103,8 @@ models:
         data_tests:
           - not_null
           - accepted_values:
-              values: ["INDIVIDUAL", "STORE", "UNKNOWN"]
+              arguments:
+                values: ["INDIVIDUAL", "STORE", "UNKNOWN"]
 
       - name: account_number
         description: >
