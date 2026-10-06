@@ -1,0 +1,120 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__customer
+    description: >
+        Silver table over ADVENTURE_WORKS.SALES.CUSTOMER. One row per customer (19,820).
+        Mints customer_key and resolves the customer_type ambiguity present in the source:
+        635 rows carry both PERSON_ID and STORE_ID; this model treats them as STORE customers
+        because the store relationship is the authoritative sales entity. account_number is
+        surfaced as-is from the source system.
+
+    config:
+      access: public
+      group: it_adventure_works
+      post_hook:
+        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_customer PRIMARY KEY (customer_key)"
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["calfarol"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Customer"
+          readme: |
+            # slv_adventure_works_sales__customer
+
+            Silver table over ADVENTURE_WORKS.SALES.CUSTOMER. One row per customer (19,820).
+            Resolves the customer_type ambiguity: 635 rows carry both PERSON_ID and STORE_ID;
+            STORE wins. Mints customer_key as the surrogate key inherited by gold dimensions.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | CUSTOMER_KEY | PK. Surrogate key, md5 of customer_id. |
+            | CUSTOMER_ID | Natural key. Unique identifier of the customer. |
+            | PERSON_ID | FK to PERSON. Retail buyer. Null when customer is a store. |
+            | STORE_ID | FK to STORE. Reseller store. Null when customer is an individual. |
+            | TERRITORY_ID | FK to SALES_TERRITORY. Sales territory this customer belongs to. |
+            | CUSTOMER_TYPE | Derived: INDIVIDUAL, STORE, or UNKNOWN. |
+            | ACCOUNT_NUMBER | Source-generated account number. Surfaced as-is. |
+            | CUSTOMER_MODIFIED_DATE | Last change timestamp, cast to TIMESTAMP_NTZ. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ----------------------------------------------------------
+      - name: customer_key
+        description: >
+            PK. Surrogate key, md5 of customer_id. Inherited by gold dimensions;
+            never recomputed downstream.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        description: "Natural key. Unique identifier of the customer in the source system."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- foreign keys --------------------------------------------------
+      - name: person_id
+        description: >
+            FK to slv_person (business_entity_id). Identifies the individual retail buyer.
+            Null when the customer is a store (customer_type = STORE).
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_person__person')
+                field: business_entity_id
+
+      - name: store_id
+        description: >
+            FK to slv_store (business_entity_id). Identifies the reseller store.
+            Null when the customer is an individual (customer_type = INDIVIDUAL).
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__store')
+                field: business_entity_id
+
+      - name: territory_id
+        description: "FK to slv_sales_territory. Sales territory this customer belongs to."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_territory')
+                field: territory_id
+
+      # --- derived -------------------------------------------------------
+      - name: customer_type
+        description: >
+            Derived customer classification. INDIVIDUAL when only PERSON_ID is set,
+            STORE when STORE_ID is set (wins over PERSON_ID for the 635 ambiguous rows),
+            UNKNOWN when both IDs are null (defensive only; should never occur).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["INDIVIDUAL", "STORE", "UNKNOWN"]
+
+      - name: account_number
+        description: >
+            Source-generated account number, format AW<zero-padded customer_id>.
+            Surfaced as-is; no transformation applied. Documented as ambiguous in
+            the source (GitHub issue #34) because its derivation logic lives in the
+            source system, not in this pipeline.
+
+      # --- audit ---------------------------------------------------------
+      - name: customer_modified_date
+        description: >
+            Timestamp of the last change to the record in the source system.
+            Cast from text to TIMESTAMP_NTZ.
