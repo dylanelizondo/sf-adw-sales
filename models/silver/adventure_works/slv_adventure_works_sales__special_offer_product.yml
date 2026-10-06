@@ -1,0 +1,74 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__special_offer_product
+    description: >
+        Silver table over ADVENTURE_WORKS.SALES.SPECIAL_OFFER_PRODUCT. One row per
+        promotion + product pair (composite key). Bridge between SALES.SPECIAL_OFFER
+        and PRODUCTION.PRODUCT stating which products a given promotion applies to.
+        No surrogate key is minted; the natural composite key is the stable join target
+        from SALES_ORDER_DETAIL.
+
+    config:
+      access: public
+      group: it_adventure_works
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["calfarol"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Special Offer"
+            - "Product"
+          readme: |
+            # slv_adventure_works_sales__special_offer_product
+
+            Silver table over ADVENTURE_WORKS.SALES.SPECIAL_OFFER_PRODUCT. One row per
+            promotion + product pair. Bridge between SALES.SPECIAL_OFFER and
+            PRODUCTION.PRODUCT stating which products a given promotion applies to.
+            Grain: special_offer_id + product_id.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | SPECIAL_OFFER_ID | Part of composite PK. FK to slv_special_offer. |
+            | PRODUCT_ID | Part of composite PK. FK to PRODUCTION.PRODUCT. |
+            | ROWGUID | Source GUID for replication traceability. |
+            | SPECIAL_OFFER_PRODUCT_MODIFIED_DATE | Last change timestamp, cast to TIMESTAMP_NTZ. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    data_tests:
+      - unique_combination_of_columns:
+          column_names: [special_offer_id, product_id]
+
+    columns:
+
+      - name: special_offer_id
+        description: >
+            Part of the composite PK. FK to slv_special_offer. Identifies the promotion.
+        data_tests:
+          - not_null
+
+      - name: product_id
+        description: >
+            Part of the composite PK. FK to PRODUCTION.PRODUCT. Product the promotion
+            applies to.
+        data_tests:
+          - not_null
+
+      - name: rowguid
+        description: >
+            Globally unique identifier (GUID) used by the source system for row-level
+            replication. Surfaced for lineage traceability; not used as a key.
+
+      # --- audit ---------------------------------------------------------
+      - name: special_offer_product_modified_date
+        description: >
+            Timestamp of the last change to the record in the source system.
+            Cast from text to TIMESTAMP_NTZ.

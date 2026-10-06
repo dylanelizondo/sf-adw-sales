@@ -1,0 +1,68 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__country_region_currency
+    description: >
+        Silver table over ADVENTURE_WORKS.SALES.COUNTRY_REGION_CURRENCY. One row per
+        country/region + currency pair (composite key). Bridge stating which currencies
+        are accepted in each country or region. No surrogate key is minted because the
+        natural composite key is stable and used as a bridge join only; neither column
+        alone identifies a row.
+
+    config:
+      access: public
+      group: it_adventure_works
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["calfarol"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Currency"
+            - "Country Region"
+          readme: |
+            # slv_adventure_works_sales__country_region_currency
+
+            Silver table over ADVENTURE_WORKS.SALES.COUNTRY_REGION_CURRENCY. One row per
+            country/region + currency pair. Bridge stating which currencies are accepted
+            in each country or region. Grain: country_region_code + currency_code.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | COUNTRY_REGION_CODE | Part of composite PK. ISO-3166 country or region code. |
+            | CURRENCY_CODE | Part of composite PK. ISO-4217 three-letter currency code. |
+            | COUNTRY_REGION_CURRENCY_MODIFIED_DATE | Last change timestamp, cast to TIMESTAMP_NTZ. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    data_tests:
+      - unique_combination_of_columns:
+          column_names: [country_region_code, currency_code]
+
+    columns:
+
+      - name: country_region_code
+        description: >
+            Part of the composite PK. FK to PERSON.COUNTRY_REGION. ISO-3166 country or
+            region code (e.g. US, GB, DE).
+        data_tests:
+          - not_null
+
+      - name: currency_code
+        description: >
+            Part of the composite PK. FK to slv_currency. ISO-4217 three-letter currency
+            code (e.g. USD, EUR, GBP).
+        data_tests:
+          - not_null
+
+      # --- audit ---------------------------------------------------------
+      - name: country_region_currency_modified_date
+        description: >
+            Timestamp of the last change to the record in the source system.
+            Cast from text to TIMESTAMP_NTZ.
