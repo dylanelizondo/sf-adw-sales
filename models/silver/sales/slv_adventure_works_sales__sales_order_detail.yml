@@ -1,0 +1,86 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__sales_order_detail
+    description: "Silver model for Sales Order Line Details. Cleans corrupted order and line keys, casts numeric and date types, and trims string identifiers. Line total reconciles with quantity * unit_price * (1 - discount). Grain: one row per sales order line (sales_order_detail_id)."
+    columns:
+      - name: sales_order_detail_id
+        description: "Primary key. Unique identifier of the individual sales order line item."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - unique
+          - not_null
+
+      - name: sales_order_id
+        description: "Foreign key to the sales order header (slv_adventure_works_sales__sales_order_header)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_adventure_works_sales__sales_order_header')
+                field: sales_order_id
+
+      - name: product_id
+        description: "Foreign key to the product catalog item sold on this line."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_production__product')
+                field: product_id
+
+      - name: special_offer_id
+        description: "Foreign key to promotional discount/offer applied to this line."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__special_offer')
+                field: special_offer_id
+
+      - name: carrier_tracking_number
+        description: "Shipment carrier tracking number associated with this order item."
+        data_type: "VARCHAR"
+
+      - name: order_qty
+        description: "Quantity of product units ordered on this line."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: unit_price
+        description: "Selling price per individual unit before promotional discounts."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: unit_price_discount
+        description: "Discount rate applied to unit price as a decimal fraction between 0.00 and 1.00."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: line_total
+        description: "Total monetary amount for the line item (order_qty * unit_price * (1 - unit_price_discount)). Verified by assert_line_total_reconciles."
+        data_type: "NUMBER(38,6)"
+        tests:
+          - not_null
+
+      - name: rowguid
+        description: "Globally unique identifier (GUID) used by the source system for row-level replication."
+        data_type: "VARCHAR"
+
+      - name: modified_date
+        description: "Last modification date of the source record, cast to DATE."
+        data_type: "DATE"
+
+      - name: _loaded_at
+        description: "Audit timestamp of when this row was processed and loaded into the silver layer."
+        data_type: "TIMESTAMP_LTZ"
+
+      - name: _source_relation
+        description: "Source table reference path for data lineage tracking."
+        data_type: "VARCHAR"

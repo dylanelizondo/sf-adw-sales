@@ -51,15 +51,25 @@ models:
       +schema: SALES
       +materialized: table
       +tags: ["silver"]
+      sales:
+        slv_adventure_works_sales__sales_order_header:
+          +cluster_by: ["order_date", "customer_id"]
+        slv_adventure_works_sales__sales_order_detail:
+          +cluster_by: ["sales_order_id", "product_id"]
 
     gold:
       +database: "{{ env_var('DBT_DB_ADW_GOLD') }}"
       +schema: SALES
-      +materialized: view
+      +materialized: table
       +tags: ["gold"]
+      sales:
+        fct_sales_orders:
+          +cluster_by: ["order_date", "territory_id"]
+        fct_safety_incidents:
+          +cluster_by: ["incident_date", "territory_id"]
 
     platinum:
       +database: "{{ env_var('DBT_DB_ADW_PLATINUM') }}"
       +schema: SALES
-      +materialized: view
-      +tags: ["gold"]
+      +materialized: table
+      +tags: ["platinum"]

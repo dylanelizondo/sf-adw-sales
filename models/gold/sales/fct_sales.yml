@@ -1,0 +1,584 @@
+version: 2
+
+models:
+  - name: fct_sales_orders
+    description: "Gold Fact Table representing individual sales order line items enriched with header status, customer, salesperson, territory, and proportional order-level allocations (tax, freight). Grain: one row per sales_order_detail_id."
+    columns:
+      - name: sales_order_detail_id
+        description: "Primary key. Unique identifier of the sales order detail line item."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - unique
+          - not_null
+
+      - name: sales_order_id
+        description: "Foreign key to the parent sales order."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: customer_id
+        description: "Foreign key to the customer dimension."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: sales_person_id
+        description: "Foreign key to the salesperson dimension (-1 for online/unassigned orders)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: territory_id
+        description: "Foreign key to the sales territory dimension (-1 if unassigned)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: product_id
+        description: "Foreign key to the product catalog dimension."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: special_offer_id
+        description: "Foreign key to the promotion/special offer applied."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: bill_to_address_id
+        description: "Foreign key to billing address dimension."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: ship_to_address_id
+        description: "Foreign key to shipping address dimension."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: ship_method_id
+        description: "Foreign key to shipping method dimension."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: credit_card_id
+        description: "Foreign key to credit card payment record (-1 if non-card)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: currency_rate_id
+        description: "Foreign key to currency exchange rate record (-1 if standard local currency)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: sales_order_number
+        description: "Customer-facing sales order reference number."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: purchase_order_number
+        description: "Customer PO number (or 'N/A')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: account_number
+        description: "Accounting account reference (or 'N/A')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: carrier_tracking_number
+        description: "Carrier shipment tracking code (or 'N/A')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: revision_number
+        description: "Document revision number."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: order_status_code
+        description: "Numeric order status code."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: order_status_label
+        description: "Human-readable order status."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: online_order_flag_code
+        description: "Channel flag code (1 = Online, 0 = Salesperson)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: is_online_order
+        description: "Boolean indicator: TRUE for online orders, FALSE for salesperson orders."
+        data_type: "BOOLEAN"
+        tests:
+          - not_null
+
+      - name: order_channel_label
+        description: "Channel descriptive label ('Online' or 'Salesperson')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: order_date
+        description: "Date the order was placed."
+        data_type: "DATE"
+        tests:
+          - not_null
+
+      - name: due_date
+        description: "Promised delivery date."
+        data_type: "DATE"
+        tests:
+          - not_null
+
+      - name: ship_date
+        description: "Actual shipping fulfillment date (null if unshipped)."
+        data_type: "DATE"
+
+      - name: days_to_ship
+        description: "Elapsed calendar days between order placement and shipment."
+        data_type: "NUMBER(38,0)"
+
+      - name: is_shipped_on_time
+        description: "Boolean indicator for on-time delivery: TRUE if ship_date <= due_date."
+        data_type: "BOOLEAN"
+
+      - name: order_quantity
+        description: "Number of units ordered on this line item."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: unit_price_amount
+        description: "Unit price per product item before discount."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: unit_price_discount_rate
+        description: "Discount decimal fraction applied to the unit price (0.00 to 1.00)."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: gross_line_amount
+        description: "Gross line revenue before discount (order_quantity * unit_price_amount)."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: discount_amount
+        description: "Total discount deduction applied to the line."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: net_line_amount
+        description: "Net line revenue after discount."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: allocated_tax_amount
+        description: "Proportionally allocated order tax amount for this line item."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: allocated_freight_amount
+        description: "Proportionally allocated order freight charge for this line item."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: allocated_total_line_amount
+        description: "Total payable amount allocated to this line item (net + allocated tax + allocated freight)."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: _loaded_at
+        description: "Timestamp when this record was loaded into the Gold layer."
+        data_type: "TIMESTAMP_LTZ"
+
+  - name: fct_safety_incidents
+    description: "Gold Fact Table representing combined workplace and vehicle safety incidents across sales operations. Grain: one row per injury_tracker_id."
+    columns:
+      - name: injury_tracker_id
+        description: "Primary key. Unique identifier of the injury incident."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - unique
+          - not_null
+
+      - name: collision_tracker_id
+        description: "Foreign key to associated vehicle collision (-1 if non-vehicle related)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: person_id
+        description: "Foreign key to person dimension (-1 if unassigned)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: sales_person_id
+        description: "Foreign key to salesperson dimension (-1 if unassigned)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: territory_id
+        description: "Foreign key to sales territory dimension (-1 if unassigned)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: vehicle_id
+        description: "Foreign key to vehicle involved (-1 if none)."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: incident_date
+        description: "Date the safety incident occurred."
+        data_type: "DATE"
+        tests:
+          - not_null
+
+      - name: is_collision_related
+        description: "Boolean flag: TRUE if the injury was caused by or tied to a vehicle collision."
+        data_type: "BOOLEAN"
+        tests:
+          - not_null
+
+      - name: injury_type
+        description: "Classification of injury (or 'Unspecified')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: body_part
+        description: "Affected anatomical region (or 'Unspecified')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: injury_severity
+        description: "Injury severity ranking (or 'Unspecified')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: collision_severity
+        description: "Associated vehicle collision severity (or 'None')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: incident_status
+        description: "Current workflow/investigation status."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: treatment_type
+        description: "Medical care administered (or 'None')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: is_hospitalized
+        description: "Boolean flag: TRUE if inpatient hospitalization was required."
+        data_type: "BOOLEAN"
+        tests:
+          - not_null
+
+      - name: days_lost_count
+        description: "Count of productive workdays lost."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: medical_cost_amount
+        description: "Direct medical treatment and hospitalization costs."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: claim_amount
+        description: "Insurance or liability claim amount."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: collision_estimated_cost_amount
+        description: "Estimated vehicle damage costs."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: collision_actual_cost_amount
+        description: "Actual vehicle repair and recovery costs."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: total_incident_cost_amount
+        description: "Combined financial cost of injury medical care and vehicle recovery."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: injury_description
+        description: "Narrative incident description."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: police_report_number
+        description: "Police or regulatory case file number."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: _loaded_at
+        description: "Timestamp when this record was loaded into the Gold layer."
+        data_type: "TIMESTAMP_LTZ"
+
+  - name: fct_sales_order_reasons
+    description: "Gold Bridge Fact Model attributing sales revenue, discounts, and order lines across multiple marketing and customer purchase reasons. Grain: one row per sales_order_id, sales_reason_id, and sales_order_detail_id."
+    columns:
+      - name: sales_order_id
+        description: "Foreign key to sales order header."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: sales_reason_id
+        description: "Foreign key to sales reason lookup."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: sales_order_detail_id
+        description: "Foreign key to sales order line item detail."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: customer_id
+        description: "Foreign key to customer dimension."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: territory_id
+        description: "Foreign key to territory dimension."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: sales_person_id
+        description: "Foreign key to salesperson dimension."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: product_id
+        description: "Foreign key to product dimension."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: order_date
+        description: "Date the order was placed."
+        data_type: "DATE"
+        tests:
+          - not_null
+
+      - name: order_status_label
+        description: "Descriptive status of the order."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: order_channel_label
+        description: "Sales channel description ('Online' or 'Salesperson')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+
+      - name: is_online_order
+        description: "Boolean indicator for online vs salesperson placement."
+        data_type: "BOOLEAN"
+        tests:
+          - not_null
+
+      - name: order_quantity
+        description: "Units ordered on this line item."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: gross_line_amount
+        description: "Gross revenue attributed to this reason combination."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: discount_amount
+        description: "Promotional discount attributed to this reason combination."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: net_line_amount
+        description: "Net revenue attributed to this purchase reason."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: allocated_total_line_amount
+        description: "Total invoice payable amount allocated to this purchase reason."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: _loaded_at
+        description: "Timestamp when this record was loaded into the Gold layer."
+        data_type: "TIMESTAMP_LTZ"
+
+  - name: agg_customer_sales_summary
+    description: "Gold Customer Mart aggregating lifetime purchasing metrics, order frequency, recency, average order value, and channel affinity per customer. Grain: one row per customer_id."
+    columns:
+      - name: customer_id
+        description: "Primary key. Unique identifier of the customer."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - unique
+          - not_null
+
+      - name: first_order_date
+        description: "Date of customer's earliest order placement."
+        data_type: "DATE"
+        tests:
+          - not_null
+
+      - name: most_recent_order_date
+        description: "Date of customer's most recent order placement."
+        data_type: "DATE"
+        tests:
+          - not_null
+
+      - name: customer_lifespan_days
+        description: "Elapsed calendar days between first and most recent purchase."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: total_orders_placed_count
+        description: "Lifetime count of distinct orders placed by the customer."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: total_units_purchased_count
+        description: "Lifetime sum of product units purchased."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: distinct_products_purchased_count
+        description: "Number of unique product catalog items purchased."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: lifetime_gross_revenue_amount
+        description: "Total gross spending before promotional discounts."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: lifetime_discount_amount
+        description: "Total promotional discount savings received by the customer."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: lifetime_net_revenue_amount
+        description: "Total lifetime net revenue from customer."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: lifetime_tax_amount
+        description: "Total lifetime tax paid."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: lifetime_freight_amount
+        description: "Total lifetime shipping/freight charges."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: lifetime_total_spend_amount
+        description: "Total lifetime gross payable invoice spend."
+        data_type: "NUMBER(19,4)"
+        tests:
+          - not_null
+
+      - name: average_order_value_amount
+        description: "Customer lifetime average order value (AOV)."
+        data_type: "NUMBER(19,4)"
+
+      - name: average_units_per_order
+        description: "Average units purchased per order."
+        data_type: "NUMBER(19,2)"
+
+      - name: online_orders_count
+        description: "Count of self-service online orders placed."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: salesperson_orders_count
+        description: "Count of salesperson-assisted orders placed."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - not_null
+
+      - name: preferred_channel_segment
+        description: "Customer channel purchasing classification ('Online Only', 'Salesperson Only', 'Omnichannel')."
+        data_type: "VARCHAR"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Online Only', 'Salesperson Only', 'Omnichannel']
+
+      - name: _loaded_at
+        description: "Timestamp when this record was loaded into the Gold layer."
+        data_type: "TIMESTAMP_LTZ"

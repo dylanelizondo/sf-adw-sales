@@ -1,0 +1,105 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__injury_tracker
+    description: "Silver model for Injury Incident Tracking. Captures and standardizes workplace/sales personnel injury records, medical severity, lost workdays, costs, and relationships to collision events and personnel. Grain: one row per injury incident (injury_tracker_id)."
+    columns:
+      - name: injury_tracker_id
+        description: "Primary key. Unique identifier of the injury record."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - unique
+          - not_null
+
+      - name: collision_tracker_id
+        description: "Foreign key to the related collision incident if the injury resulted from a vehicle collision."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - relationships:
+              arguments:
+                to: ref('slv_adventure_works_sales__collision_tracker')
+                field: collision_tracker_id
+
+      - name: person_id
+        description: "Foreign key to the injured person record."
+        data_type: "NUMBER(38,0)"
+
+      - name: sales_person_id
+        description: "Foreign key to the sales representative involved in the incident."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_person')
+                field: business_entity_id
+
+      - name: territory_id
+        description: "Foreign key to the sales territory where the injury occurred."
+        data_type: "NUMBER(38,0)"
+        tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_territory')
+                field: territory_id
+
+      - name: incident_date
+        description: "Date the injury occurred, cast to DATE."
+        data_type: "DATE"
+        tests:
+          - not_null
+
+      - name: injury_type
+        description: "Type/classification of injury (e.g. Sprain, Fracture, Laceration, Concussion)."
+        data_type: "VARCHAR"
+
+      - name: body_part
+        description: "Part of body affected by the injury."
+        data_type: "VARCHAR"
+
+      - name: severity
+        description: "Severity level of the injury (e.g. Minor, Moderate, Major, Critical)."
+        data_type: "VARCHAR"
+
+      - name: status
+        description: "Current case status (e.g. Open, Under Treatment, Recovered, Closed)."
+        data_type: "VARCHAR"
+
+      - name: treatment_type
+        description: "Type of medical care received (e.g. First Aid, Emergency Room, Outpatient, Surgery)."
+        data_type: "VARCHAR"
+
+      - name: is_hospitalized
+        description: "Boolean flag indicating whether the person was hospitalized (TRUE/FALSE)."
+        data_type: "BOOLEAN"
+
+      - name: days_lost
+        description: "Number of work days lost due to the injury."
+        data_type: "NUMBER(38,0)"
+
+      - name: description
+        description: "Narrative description of the incident and injury details."
+        data_type: "VARCHAR"
+
+      - name: medical_cost
+        description: "Total medical and treatment expenses incurred."
+        data_type: "NUMBER(19,4)"
+
+      - name: claim_amount
+        description: "Insurance or compensation claim amount filed."
+        data_type: "NUMBER(19,4)"
+
+      - name: rowguid
+        description: "Globally unique identifier (GUID) used by the source system for row-level replication."
+        data_type: "VARCHAR"
+
+      - name: modified_date
+        description: "Last modification date of the source record, cast to DATE."
+        data_type: "DATE"
+
+      - name: _loaded_at
+        description: "Audit timestamp of when this row was processed and loaded into the silver layer."
+        data_type: "TIMESTAMP_LTZ"
+
+      - name: _source_relation
+        description: "Source table reference path for data lineage tracking."
+        data_type: "VARCHAR"
