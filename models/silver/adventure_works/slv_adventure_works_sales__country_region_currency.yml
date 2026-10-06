@@ -43,7 +43,8 @@ models:
 
     data_tests:
       - unique_combination_of_columns:
-          column_names: [country_region_code, currency_code]
+          arguments:
+            columns: [country_region_code, currency_code]
 
     columns:
 

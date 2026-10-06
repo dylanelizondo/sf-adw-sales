@@ -45,7 +45,8 @@ models:
 
     data_tests:
       - unique_combination_of_columns:
-          column_names: [special_offer_id, product_id]
+          arguments:
+            columns: [special_offer_id, product_id]
 
     columns:
 
