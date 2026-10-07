@@ -1,0 +1,212 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__sales_order_header
+    description: >
+        Header of sales orders, cleaned and typed. One row per sales order. The corrupted order
+        key is recovered with recover_sales_order_id, dates and amounts are cast, and the status
+        and channel codes are decoded next to the original codes. COMMENT is dropped because it
+        is 100% NULL in the source. Rows whose key cannot be recovered are dropped; a row-count
+        test against bronze makes any loss fail the build.
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["mlara"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # slv_adventure_works_sales__sales_order_header
+
+            Header of sales orders, cleaned and typed. One row per sales order. The corrupted order key is recovered with recover_sales_order_id, dates and amounts are cast, and the status and channel codes are decoded next to the original codes. COMMENT is dropped because it is 100% NULL in the source. Rows whose key cannot be recovered are dropped; a row-count test against bronze makes any loss fail the build.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | SALES_ORDER_KEY | Surrogate key, md5 of the recovered sales_order_id, built the same way as the other silver surrogate keys. |
+            | SALES_ORDER_ID | Natural key. Sales order identifier, recovered from the corrupted source key with recover_sales_order_id. |
+            | REVISION_NUMBER | Revision number of the document. Incremented on every change. |
+            | ORDER_DATE | Date the order was placed, cast to DATE with to_silver_date. |
+            | DUE_DATE | Date the delivery was promised for, cast to DATE with to_silver_date. |
+            | SHIP_DATE | Date the order was shipped, cast to DATE with to_silver_date. Null while it has not shipped. |
+            | STATUS_CODE | Original order status: 1 in process, 2 approved, 3 backordered, 4 rejected, 5 shipped, 6 cancelled. |
+            | STATUS_LABEL | Human-readable order status, decoded from status_code. |
+            | ONLINE_ORDER_FLAG_CODE | Original online order flag: 1 when the order was placed online, 0 when a salesperson placed it. |
+            | IS_ONLINE_ORDER | True when the order was placed online, false when a salesperson placed it. |
+            | ORDER_CHANNEL_LABEL | Sales channel (Online or Salesperson), decoded from online_order_flag_code. |
+            | SALES_ORDER_NUMBER | Sales order number shown to the customer. |
+            | PURCHASE_ORDER_NUMBER | Purchase order number the customer assigned to the sale. |
+            | ACCOUNT_NUMBER | Accounting account number tied to the sale. |
+            | CUSTOMER_ID | FK to the customer that placed the order. |
+            | SALES_PERSON_ID | FK to the salesperson assigned to the order. Null for online orders. |
+            | TERRITORY_ID | FK to the sales territory the order belongs to. |
+            | BILL_TO_ADDRESS_ID | FK to the billing address. |
+            | SHIP_TO_ADDRESS_ID | FK to the shipping address. |
+            | SHIP_METHOD_ID | FK to the shipping method used. |
+            | CREDIT_CARD_ID | FK to the credit card associated with the order. |
+            | CREDIT_CARD_APPROVAL_CODE | Approval code returned by the card processor. |
+            | CURRENCY_RATE_ID | FK to the exchange rate applied. Null for sales in local currency. |
+            | SUB_TOTAL | Order subtotal before tax and freight. |
+            | TAX_AMT | Tax amount charged on the order. |
+            | FREIGHT | Freight cost charged on the order. |
+            | TOTAL_DUE | Total amount due on the order (subtotal + tax + freight). |
+            | ROWGUID | Globally unique identifier (GUID) used by the source system for row-level replication. |
+            | MODIFIED_DATE | Date of the last change to the record in the source system, cast to DATE with to_silver_date. |
+            | _LOADED_AT | UTC timestamp of when this row was built in the silver layer. |
+            | _SOURCE_RELATION | Bronze model this row was read from. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: sales_order_key
+        description: "Surrogate key, md5 of the recovered sales_order_id, built the same way as the other silver surrogate keys."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: sales_order_id
+        description: "Natural key. Sales order identifier, recovered from the corrupted source key with recover_sales_order_id."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: revision_number
+        description: "Revision number of the document. Incremented on every change."
+
+      # --- dates -------------------------------------------------------------
+      - name: order_date
+        description: "Date the order was placed, cast to DATE with to_silver_date."
+        data_tests: [not_null]
+
+      - name: due_date
+        description: "Date the delivery was promised for, cast to DATE with to_silver_date."
+        data_tests: [not_null]
+
+      - name: ship_date
+        description: "Date the order was shipped, cast to DATE with to_silver_date. Null while it has not shipped."
+
+      # --- status and channel --------------------------------------------------
+      - name: status_code
+        description: "Original order status: 1 in process, 2 approved, 3 backordered, 4 rejected, 5 shipped, 6 cancelled."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6]
+
+      - name: status_label
+        description: "Human-readable order status, decoded from status_code."
+
+      - name: online_order_flag_code
+        description: "Original online order flag: 1 when the order was placed online, 0 when a salesperson placed it."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+
+      - name: is_online_order
+        description: "True when the order was placed online, false when a salesperson placed it."
+
+      - name: order_channel_label
+        description: "Sales channel (Online or Salesperson), decoded from online_order_flag_code."
+
+      # --- identifiers -------------------------------------------------------
+      - name: sales_order_number
+        description: "Sales order number shown to the customer."
+
+      - name: purchase_order_number
+        description: "Purchase order number the customer assigned to the sale."
+
+      - name: account_number
+        description: "Accounting account number tied to the sale."
+
+      # --- foreign keys --------------------------------------------------------
+      - name: customer_id
+        description: "FK to the customer that placed the order."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_adventure_works_sales__customer')
+                field: customer_id
+
+      - name: sales_person_id
+        description: "FK to the salesperson assigned to the order. Null for online orders."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('slv_adventure_works_sales__sales_person')
+                field: business_entity_id
+
+      - name: territory_id
+        description: "FK to the sales territory the order belongs to."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('slv_adventure_works_sales__sales_territory')
+                field: territory_id
+
+      - name: bill_to_address_id
+        description: "FK to the billing address."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_person__address')
+                field: address_id
+
+      - name: ship_to_address_id
+        description: "FK to the shipping address."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_person__address')
+                field: address_id
+
+      - name: ship_method_id
+        description: "FK to the shipping method used."
+
+      - name: credit_card_id
+        description: "FK to the credit card associated with the order."
+
+      - name: credit_card_approval_code
+        description: "Approval code returned by the card processor."
+
+      - name: currency_rate_id
+        description: "FK to the exchange rate applied. Null for sales in local currency."
+
+      # --- amounts -------------------------------------------------------------
+      - name: sub_total
+        description: "Order subtotal before tax and freight."
+
+      - name: tax_amt
+        description: "Tax amount charged on the order."
+
+      - name: freight
+        description: "Freight cost charged on the order."
+
+      - name: total_due
+        description: "Total amount due on the order (subtotal + tax + freight)."
+        data_tests: [not_null]
+
+      # --- audit -------------------------------------------------------------
+      - name: rowguid
+        description: "Globally unique identifier (GUID) used by the source system for row-level replication."
+
+      - name: modified_date
+        description: "Date of the last change to the record in the source system, cast to DATE with to_silver_date."
+        data_tests: [not_null]
+
+      - name: _loaded_at
+        description: "UTC timestamp of when this row was built in the silver layer."
+
+      - name: _source_relation
+        description: "Bronze model this row was read from."
