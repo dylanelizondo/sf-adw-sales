@@ -8,6 +8,52 @@ models:
         converted to booleans. Rows without an incident number are dropped. Contains driver
         names (PII).
 
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["mlara"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # slv_adventure_works_sales__collision_tracker
+
+            Log of fleet vehicle collisions, cleaned and typed. One row per collision incident. Text is trimmed, the incident date and speed are cast, and the yes/no flags are converted to booleans. Rows without an incident number are dropped. Contains driver names (PII).
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | COLLISION_TRACKER_KEY | Surrogate key, md5 of incident_number, built the same way as the other silver surrogate keys. |
+            | INCIDENT_NUMBER | Natural key. Collision incident number, trimmed. |
+            | INCIDENT_DATE | Date the collision happened, cast to DATE with to_silver_date. |
+            | DAY_OF_WEEK | Day of the week the collision happened. |
+            | TIME_OF_DAY | Time band in which the collision happened. |
+            | INCIDENT_TITLE | Short title summarising the incident. |
+            | COLLISION_TYPE | Type of collision recorded. |
+            | COLLISION_INITIATED_BY | Party that initiated the collision. |
+            | VEHICLE_ACTIVITY_AT_COLLISION | Manoeuvre the vehicle was performing at the moment of impact. |
+            | MPH_AT_COLLISION | Estimated speed in miles per hour at the moment of impact, cast to NUMBER(9,2). |
+            | SERVICE_AREA | Service area where the collision happened. |
+            | TERRITORY | Operating territory the collision was reported in. |
+            | COLLISION_LOCATION | Location where the collision happened. |
+            | DRIVER_FIRST_NAME | Given name of the driver involved. Sensitive data (PII). |
+            | DRIVER_LAST_NAME | Family name of the driver involved. Sensitive data (PII). |
+            | IS_CDL_HOLDER | True when the driver holds a commercial drivers license (CDL), false when not, null when the source value is not a recognised yes/no. |
+            | SAFETY_PROFESSIONAL | Safety professional who handled the case. |
+            | IS_KORE_CAMERA_ASSISTED | True when KORE camera footage supported the analysis, false when not, null when the source value is not a recognised yes/no. |
+            | CONCLUSION | Conclusion of the incident investigation. |
+            | NOTES | Free-form investigator notes about the incident. |
+            | _LOADED_AT | UTC timestamp of when this row was built in the silver layer. |
+            | _SOURCE_RELATION | Bronze model this row was read from. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
     columns:
 
       # --- keys ------------------------------------------------------------
