@@ -1,0 +1,124 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__sales_order_detail
+    description: >
+        Sales order lines with product, quantity, price and discount, cleaned and typed. One row
+        per order line. The corrupted order key is recovered with recover_sales_order_id and
+        numbers and dates are cast. LINE_TOTAL is kept exactly as delivered because it reconciles
+        with the source; a test proves it still adds up. Rows whose keys cannot be parsed are
+        dropped; a row-count test against bronze makes any loss fail the build.
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["mlara"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # slv_adventure_works_sales__sales_order_detail
+
+            Sales order lines with product, quantity, price and discount, cleaned and typed. One row per order line. The corrupted order key is recovered with recover_sales_order_id and numbers and dates are cast. LINE_TOTAL is kept exactly as delivered because it reconciles with the source; a test proves it still adds up. Rows whose keys cannot be parsed are dropped; a row-count test against bronze makes any loss fail the build.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | SALES_ORDER_DETAIL_KEY | Surrogate key, md5 of sales_order_detail_id, built the same way as the other silver surrogate keys. |
+            | SALES_ORDER_DETAIL_ID | Natural key. Unique identifier of the order line. |
+            | SALES_ORDER_ID | FK to the sales order header. Recovered from the corrupted source key with recover_sales_order_id. |
+            | PRODUCT_ID | FK to the product sold on this line. |
+            | SPECIAL_OFFER_ID | FK to the promotion applied to this line. |
+            | CARRIER_TRACKING_NUMBER | Carrier tracking number for the line. |
+            | ORDER_QTY | Number of units ordered. |
+            | UNIT_PRICE | Unit price applied on the line. |
+            | UNIT_PRICE_DISCOUNT | Discount applied to the unit price, as a decimal fraction. |
+            | LINE_TOTAL | Line total as delivered by the source (quantity times price net of discount). Not recomputed; the line_total_reconciles test proves it adds up. |
+            | ROWGUID | Globally unique identifier (GUID) used by the source system for row-level replication. |
+            | MODIFIED_DATE | Date of the last change to the record in the source system, cast to DATE with to_silver_date. |
+            | _LOADED_AT | UTC timestamp of when this row was built in the silver layer. |
+            | _SOURCE_RELATION | Bronze model this row was read from. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: sales_order_detail_key
+        description: "Surrogate key, md5 of sales_order_detail_id, built the same way as the other silver surrogate keys."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: sales_order_detail_id
+        description: "Natural key. Unique identifier of the order line."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: sales_order_id
+        description: "FK to the sales order header. Recovered from the corrupted source key with recover_sales_order_id."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_adventure_works_sales__sales_order_header')
+                field: sales_order_id
+
+      # --- product and promotion -------------------------------------------------
+      - name: product_id
+        description: "FK to the product sold on this line."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_production__product')
+                field: product_id
+
+      - name: special_offer_id
+        description: "FK to the promotion applied to this line."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('slv_adventure_works_sales__special_offer')
+                field: special_offer_id
+
+      - name: carrier_tracking_number
+        description: "Carrier tracking number for the line."
+
+      # --- quantity and price --------------------------------------------------
+      - name: order_qty
+        description: "Number of units ordered."
+        data_tests: [not_null]
+
+      - name: unit_price
+        description: "Unit price applied on the line."
+        data_tests: [not_null]
+
+      - name: unit_price_discount
+        description: "Discount applied to the unit price, as a decimal fraction."
+        data_tests: [not_null]
+
+      - name: line_total
+        description: "Line total as delivered by the source (quantity times price net of discount). Not recomputed; the line_total_reconciles test proves it adds up."
+        data_tests: [not_null]
+
+      # --- audit -------------------------------------------------------------
+      - name: rowguid
+        description: "Globally unique identifier (GUID) used by the source system for row-level replication."
+
+      - name: modified_date
+        description: "Date of the last change to the record in the source system, cast to DATE with to_silver_date."
+        data_tests: [not_null]
+
+      - name: _loaded_at
+        description: "UTC timestamp of when this row was built in the silver layer."
+
+      - name: _source_relation
+        description: "Bronze model this row was read from."

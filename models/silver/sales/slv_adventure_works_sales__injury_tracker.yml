@@ -31,8 +31,8 @@ models:
             | --- | --- |
             | INJURY_TRACKER_KEY | Surrogate key, md5 of report_number, built the same way as the other silver surrogate keys. |
             | REPORT_NUMBER | Natural key. Report number of the safety event, trimmed. |
-            | CREATED_AT | Date and time the report was captured, cast to TIMESTAMP_NTZ with to_silver_ts. |
-            | DATE_OCCURRED | Date the event happened, cast to DATE with to_silver_date. |
+            | CREATED_AT | Date and time the report was captured, as a TIMESTAMP_NTZ. |
+            | DATE_OCCURRED | Date the event happened, as a DATE. |
             | EVENT_TYPE | Type of safety event reported. |
             | EVENT_REPORT_TITLE | Short title of the report. |
             | SAFETY_INCIDENT_DESCRIPTION | Narrative description of the incident. |
@@ -65,11 +65,11 @@ models:
 
       # --- when --------------------------------------------------------------
       - name: created_at
-        description: "Date and time the report was captured, cast to TIMESTAMP_NTZ with to_silver_ts."
+        description: "Date and time the report was captured, as a TIMESTAMP_NTZ."
         data_tests: [not_null]
 
       - name: date_occurred
-        description: "Date the event happened, cast to DATE with to_silver_date."
+        description: "Date the event happened, as a DATE."
         data_tests: [not_null]
 
       # --- what happened -------------------------------------------------------
