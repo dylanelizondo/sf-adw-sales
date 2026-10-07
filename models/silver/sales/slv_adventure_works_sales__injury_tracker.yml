@@ -1,0 +1,114 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__injury_tracker
+    description: >
+        Log of workplace injuries and safety events with their OSHA classification, cleaned
+        and typed. One row per safety event report. Text is trimmed, the report timestamp and
+        event date are cast, and the day counts are cast to whole numbers. Rows without a
+        report number are dropped.
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["mlara"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # slv_adventure_works_sales__injury_tracker
+
+            Log of workplace injuries and safety events with their OSHA classification, cleaned and typed. One row per safety event report. Text is trimmed, the report timestamp and event date are cast, and the day counts are cast to whole numbers. Rows without a report number are dropped.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | INJURY_TRACKER_KEY | Surrogate key, md5 of report_number, built the same way as the other silver surrogate keys. |
+            | REPORT_NUMBER | Natural key. Report number of the safety event, trimmed. |
+            | CREATED_AT | Date and time the report was captured, cast to TIMESTAMP_NTZ with to_silver_ts. |
+            | DATE_OCCURRED | Date the event happened, cast to DATE with to_silver_date. |
+            | EVENT_TYPE | Type of safety event reported. |
+            | EVENT_REPORT_TITLE | Short title of the report. |
+            | SAFETY_INCIDENT_DESCRIPTION | Narrative description of the incident. |
+            | OSHA_CLASSIFICATION | Classification of the event under OSHA rules. |
+            | DEPARTMENT | Department where the event happened. |
+            | LOCATION_OF_EVENT | Physical location where the event happened. |
+            | NATURE_OF_INJURY | Nature of the injury sustained. |
+            | REGION_OF_BODY | Part of the body affected. |
+            | DAYS_RESTRICTED | Days of restricted work resulting from the event, cast to a whole number. |
+            | DAYS_LOST | Days of work lost resulting from the event, cast to a whole number. |
+            | _LOADED_AT | UTC timestamp of when this row was built in the silver layer. |
+            | _SOURCE_RELATION | Bronze model this row was read from. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: injury_tracker_key
+        description: "Surrogate key, md5 of report_number, built the same way as the other silver surrogate keys."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: report_number
+        description: "Natural key. Report number of the safety event, trimmed."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- when --------------------------------------------------------------
+      - name: created_at
+        description: "Date and time the report was captured, cast to TIMESTAMP_NTZ with to_silver_ts."
+        data_tests: [not_null]
+
+      - name: date_occurred
+        description: "Date the event happened, cast to DATE with to_silver_date."
+        data_tests: [not_null]
+
+      # --- what happened -------------------------------------------------------
+      - name: event_type
+        description: "Type of safety event reported."
+
+      - name: event_report_title
+        description: "Short title of the report."
+
+      - name: safety_incident_description
+        description: "Narrative description of the incident."
+
+      - name: osha_classification
+        description: "Classification of the event under OSHA rules."
+
+      # --- where -------------------------------------------------------------
+      - name: department
+        description: "Department where the event happened."
+
+      - name: location_of_event
+        description: "Physical location where the event happened."
+
+      # --- injury ------------------------------------------------------------
+      - name: nature_of_injury
+        description: "Nature of the injury sustained."
+
+      - name: region_of_body
+        description: "Part of the body affected."
+
+      # --- impact ------------------------------------------------------------
+      - name: days_restricted
+        description: "Days of restricted work resulting from the event, cast to a whole number."
+
+      - name: days_lost
+        description: "Days of work lost resulting from the event, cast to a whole number."
+
+      # --- audit -------------------------------------------------------------
+      - name: _loaded_at
+        description: "UTC timestamp of when this row was built in the silver layer."
+
+      - name: _source_relation
+        description: "Bronze model this row was read from."
