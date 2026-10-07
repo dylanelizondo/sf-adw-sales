@@ -31,7 +31,7 @@ models:
             | --- | --- |
             | COLLISION_TRACKER_KEY | Surrogate key, md5 of incident_number, built the same way as the other silver surrogate keys. |
             | INCIDENT_NUMBER | Natural key. Collision incident number, trimmed. |
-            | INCIDENT_DATE | Date the collision happened, cast to DATE with to_silver_date. |
+            | INCIDENT_DATE | Date the collision happened, as a DATE. |
             | DAY_OF_WEEK | Day of the week the collision happened. |
             | TIME_OF_DAY | Time band in which the collision happened. |
             | INCIDENT_TITLE | Short title summarising the incident. |
@@ -71,7 +71,7 @@ models:
 
       # --- when --------------------------------------------------------------
       - name: incident_date
-        description: "Date the collision happened, cast to DATE with to_silver_date."
+        description: "Date the collision happened, as a DATE."
         data_tests: [not_null]
 
       - name: day_of_week
