@@ -1,0 +1,237 @@
+version: 2
+
+models:
+  - name: dim_orders
+    description: >
+        Gold dimension for AdventureWorks sales orders. One row per order (31,465,
+        equal to SALES.SALES_ORDER_HEADER). Mints order_key and enriches the header
+        with three pre-aggregated line metrics (order_line_count, order_total_qty,
+        order_total_revenue) computed from SALES_ORDER_DETAIL via a subquery, so
+        order-level dashboards never need to join to FACT_ORDER_LINE. Individual
+        order lines live in FACT_ORDER_LINE (issue #28); join on order_key when
+        line-level detail is required.
+
+    config:
+      access: public
+      group: it_adventure_works
+      post_hook:
+        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_dim_orders PRIMARY KEY (order_key)"
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["calfarol"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales Order"
+          readme: |
+            # dim_orders
+
+            Gold dimension for AdventureWorks sales orders. One row per order (31,465).
+            Mints order_key. Derives order_channel (ONLINE/OFFLINE), order_status_label
+            (human-readable from the 1–6 status code), and is_shipped. Pre-aggregates
+            three line metrics from SALES_ORDER_DETAIL so order-level KPIs need no
+            additional join. Individual lines live in FACT_ORDER_LINE.
+
+            **Layer:** gold
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | ORDER_KEY | PK. Surrogate key, md5 of sales_order_id. |
+            | SALES_ORDER_ID | Natural key. Unique identifier of the sales order. |
+            | SALES_ORDER_NUMBER | Order number shown to the customer. |
+            | PURCHASE_ORDER_NUMBER | PO number the customer assigned. |
+            | ACCOUNT_NUMBER | Accounting account number tied to the sale. |
+            | REVISION_NUMBER | Revision counter, incremented on every change. |
+            | ORDER_DATE | Date the order was placed. Cast to DATE. |
+            | DUE_DATE | Promised delivery date. Cast to DATE. |
+            | SHIP_DATE | Date shipped. Null until shipped. Cast to DATE. |
+            | IS_SHIPPED | True when ship_date is not null. |
+            | ORDER_STATUS | Status code 1–6. |
+            | ORDER_STATUS_LABEL | Human-readable label for order_status. |
+            | ONLINE_ORDER_FLAG | True when placed online. |
+            | ORDER_CHANNEL | ONLINE or OFFLINE, derived from online_order_flag. |
+            | CUSTOMER_ID | FK to slv_adventure_works_sales__customer. |
+            | SALES_PERSON_ID | FK to SALES.SALES_PERSON. Null for online orders. |
+            | TERRITORY_ID | FK to slv_adventure_works_sales__sales_territory. |
+            | BILL_TO_ADDRESS_ID | FK to PERSON.ADDRESS. Billing address. |
+            | SHIP_TO_ADDRESS_ID | FK to PERSON.ADDRESS. Shipping address. |
+            | SHIP_METHOD_ID | FK to PURCHASING.SHIP_METHOD. |
+            | CREDIT_CARD_ID | FK to SALES.CREDIT_CARD. |
+            | CURRENCY_RATE_ID | FK to SALES.CURRENCY_RATE. Null for local-currency orders. |
+            | SUB_TOTAL | Order subtotal before tax and freight. DECIMAL(18,2). |
+            | TAX_AMT | Tax amount charged. DECIMAL(18,2). |
+            | FREIGHT | Freight cost charged. DECIMAL(18,2). |
+            | TOTAL_DUE | Total amount due (subtotal + tax + freight). DECIMAL(18,2). |
+            | ORDER_LINE_COUNT | Number of order lines. Pre-aggregated from SALES_ORDER_DETAIL. |
+            | ORDER_TOTAL_QTY | Total units ordered across all lines. Pre-aggregated. |
+            | ORDER_TOTAL_REVENUE | Total line revenue across all lines. Pre-aggregated. DECIMAL(18,2). |
+            | ORDER_COMMENT | Free-form comment on the order. |
+            | ORDER_MODIFIED_DATE | Last change timestamp, cast to TIMESTAMP_NTZ. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ----------------------------------------------------------
+      - name: order_key
+        description: >
+            PK. Surrogate key, md5 of sales_order_id. Join target for fact tables.
+            Never recomputed downstream.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: sales_order_id
+        description: "Natural key. Unique identifier of the sales order."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- order identifiers --------------------------------------------
+      - name: sales_order_number
+        description: "Order number shown to the customer (e.g. SO43659)."
+        data_tests:
+          - not_null
+
+      - name: purchase_order_number
+        description: "PO number the customer assigned. Null for online orders."
+
+      - name: account_number
+        description: "Accounting account number tied to the sale."
+
+      - name: revision_number
+        description: "Revision counter; incremented on every change to the order."
+
+      # --- dates --------------------------------------------------------
+      - name: order_date
+        description: "Date the order was placed. Cast from text to DATE."
+        data_tests:
+          - not_null
+
+      - name: due_date
+        description: "Promised delivery date. Cast from text to DATE."
+        data_tests:
+          - not_null
+
+      - name: ship_date
+        description: "Date the order shipped. Null until shipped. Cast from text to DATE."
+
+      - name: is_shipped
+        description: "True when ship_date is not null."
+        data_tests:
+          - not_null
+
+      # --- status -------------------------------------------------------
+      - name: order_status
+        description: "Status code: 1 In Process, 2 Approved, 3 Backordered, 4 Rejected, 5 Shipped, 6 Cancelled."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6]
+                quote: false
+
+      - name: order_status_label
+        description: "Human-readable label derived from order_status."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["In Process", "Approved", "Backordered", "Rejected", "Shipped", "Cancelled", "Unknown"]
+
+      # --- channel ------------------------------------------------------
+      - name: online_order_flag
+        description: "True when the order was placed online; false when placed by a salesperson."
+        data_tests:
+          - not_null
+
+      - name: order_channel
+        description: "ONLINE or OFFLINE, derived from online_order_flag."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["ONLINE", "OFFLINE"]
+
+      # --- foreign keys -------------------------------------------------
+      - name: customer_id
+        description: "FK to slv_adventure_works_sales__customer."
+        data_tests:
+          - not_null
+
+      - name: sales_person_id
+        description: "FK to SALES.SALES_PERSON. Null for online orders (online_order_flag = true)."
+
+      - name: territory_id
+        description: "FK to slv_adventure_works_sales__sales_territory."
+
+      - name: bill_to_address_id
+        description: "FK to PERSON.ADDRESS. Billing address."
+        data_tests:
+          - not_null
+
+      - name: ship_to_address_id
+        description: "FK to PERSON.ADDRESS. Shipping address."
+        data_tests:
+          - not_null
+
+      - name: ship_method_id
+        description: "FK to PURCHASING.SHIP_METHOD."
+        data_tests:
+          - not_null
+
+      - name: credit_card_id
+        description: "FK to SALES.CREDIT_CARD. Null when no credit card was used."
+
+      - name: currency_rate_id
+        description: "FK to SALES.CURRENCY_RATE. Null for orders in local currency."
+
+      # --- amounts ------------------------------------------------------
+      - name: sub_total
+        description: "Order subtotal before tax and freight. DECIMAL(18,2)."
+        data_tests:
+          - not_null
+
+      - name: tax_amt
+        description: "Tax amount charged on the order. DECIMAL(18,2)."
+        data_tests:
+          - not_null
+
+      - name: freight
+        description: "Freight cost charged on the order. DECIMAL(18,2)."
+        data_tests:
+          - not_null
+
+      - name: total_due
+        description: "Total amount due: subtotal + tax + freight. DECIMAL(18,2)."
+        data_tests:
+          - not_null
+
+      # --- pre-aggregated line metrics ----------------------------------
+      - name: order_line_count
+        description: >
+            Number of order lines in SALES_ORDER_DETAIL for this order.
+            Pre-aggregated so order-level dashboards need no join to FACT_ORDER_LINE.
+        data_tests:
+          - not_null
+
+      - name: order_total_qty
+        description: "Total units ordered across all lines. Pre-aggregated."
+        data_tests:
+          - not_null
+
+      - name: order_total_revenue
+        description: "Sum of line_total across all lines. Pre-aggregated. DECIMAL(18,2)."
+        data_tests:
+          - not_null
+
+      # --- comment / audit ----------------------------------------------
+      - name: order_comment
+        description: "Free-form comment captured on the order. Null for most rows."
+
+      - name: order_modified_date
+        description: "Last change timestamp from the source. Cast from text to TIMESTAMP_NTZ."

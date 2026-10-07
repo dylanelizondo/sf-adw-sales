@@ -1,0 +1,95 @@
+version: 2
+
+models:
+  - name: dim_store
+    description: >
+        Gold dimension for AdventureWorks reseller stores. One row per store (701,
+        equal to SALES.STORE). Mints store_key and resolves the assigned salesperson
+        identity from slv_person so downstream fact models join a single dimension
+        rather than re-joining STORE and PERSON separately.
+
+    config:
+      access: public
+      group: it_adventure_works
+      post_hook:
+        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_dim_store PRIMARY KEY (store_key)"
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["calfarol"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Store"
+            - "Sales Person"
+          readme: |
+            # dim_store
+
+            Gold dimension for AdventureWorks reseller stores. One row per store (701).
+            Mints store_key as the surrogate key. Resolves the assigned salesperson
+            from slv_person so BI tools join this single dimension to facts.
+
+            **Layer:** gold
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | STORE_KEY | PK. Surrogate key, md5 of store_id. |
+            | STORE_ID | Natural key. business_entity_id from SALES.STORE. |
+            | STORE_NAME | Name of the reseller store. |
+            | SALES_PERSON_ID | FK to SALES.SALES_PERSON (business_entity_id). |
+            | SALES_PERSON_KEY | Surrogate key of the assigned salesperson, from slv_person. |
+            | SALES_PERSON_FULL_NAME | Resolved full name of the assigned salesperson. |
+            | STORE_MODIFIED_DATE | Last change timestamp, cast to TIMESTAMP_NTZ. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ----------------------------------------------------------
+      - name: store_key
+        description: >
+            PK. Surrogate key, md5 of store_id. Inherited by fact tables;
+            never recomputed downstream.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: store_id
+        description: >
+            Natural key. business_entity_id from SALES.STORE. Unique identifier
+            of the reseller store across all AdventureWorks schemas.
+        data_tests:
+          - unique
+          - not_null
+
+      # --- store attributes ----------------------------------------------
+      - name: store_name
+        description: "Name of the reseller store."
+        data_tests:
+          - not_null
+
+      # --- salesperson ---------------------------------------------------
+      - name: sales_person_id
+        description: >
+            FK to SALES.SALES_PERSON (business_entity_id). The salesperson
+            assigned to serve this store. Null if no salesperson is assigned.
+
+      - name: sales_person_key
+        description: >
+            Surrogate key of the assigned salesperson, inherited from slv_person.
+            Null when sales_person_id is null. Use this to join dim_store to a
+            person dimension without re-joining slv_person.
+
+      - name: sales_person_full_name
+        description: >
+            Resolved display name of the assigned salesperson, from slv_person.
+            Null when sales_person_id is null.
+
+      # --- audit ---------------------------------------------------------
+      - name: store_modified_date
+        description: >
+            Timestamp of the last change to the store record in the source system.
+            Cast from text to TIMESTAMP_NTZ.
