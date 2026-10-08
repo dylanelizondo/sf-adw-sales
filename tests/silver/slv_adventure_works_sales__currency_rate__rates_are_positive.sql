@@ -9,6 +9,6 @@ select
     , to_currency_code
     , average_rate
     , end_of_day_rate
-from {{ ref('slv_sales__currency_rate') }}
+from {{ ref('slv_adventure_works_sales__currency_rate') }}
 where average_rate <= 0
    or end_of_day_rate <= 0

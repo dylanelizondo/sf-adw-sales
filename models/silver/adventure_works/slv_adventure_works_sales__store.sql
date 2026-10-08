@@ -39,4 +39,4 @@ select
     -- audit -------------------------------------------------------------
     try_to_timestamp(modified_date) as store_modified_date
 
-from {{ ref('SALES_Bronze') }}
+from {{ ref('adw_core', 'brz_adventure_works_sales__store') }}
