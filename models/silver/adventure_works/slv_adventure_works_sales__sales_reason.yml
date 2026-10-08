@@ -5,13 +5,11 @@ models:
     description: >
         Silver table over ADVENTURE_WORKS.SALES.SALES_REASON. One row per reason.
         Lookup of the reasons a customer gave for a purchase, grouped by reason_type.
-        Referenced by slv_sales_order_header_sales_reason. The source columns arrive
+        Referenced by slv_adventure_works_sales__sales_order_header_sales_reason. The source columns arrive
         without separators (SALESREASONID, REASONTYPE, MODIFIEDDATE); this model
         renames them to snake_case — that alignment happens once here, not in bronze.
 
     config:
-      access: public
-      group: it_adventure_works
       post_hook:
         - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_sales_reason PRIMARY KEY (sales_reason_key)"
       meta:
@@ -23,7 +21,7 @@ models:
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
           termNames:
-            - "Sales Reason"
+            - "Sales"
           readme: |
             # slv_adventure_works_sales__sales_reason
 
@@ -67,7 +65,7 @@ models:
       - name: sales_reason_name
         description: >
             Name of the reason (e.g. Price, Quality, Manufacturer). Source column NAME,
-            prefixed to avoid collision with the SQL reserved word in downstream queries.
+            renamed because NAME is too generic to survive a join downstream.
         data_tests:
           - not_null
 
