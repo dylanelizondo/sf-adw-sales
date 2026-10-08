@@ -10,20 +10,18 @@ models:
         the row count is not a reason to skip the layer.
 
     config:
-      access: public
-      group: it_adventure_works
       post_hook:
         - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_shopping_cart_item PRIMARY KEY (shopping_cart_item_key)"
       meta:
         atlan:
           attributes:
             ownerUsers: ["calfarol"]
-            ownerGroups: ["sales_adw"]
+            ownerGroups: ["sales_adventure_works"]
             certificateStatus: DRAFT
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
           termNames:
-            - "Shopping Cart"
+            - "Sales"
           readme: |
             # slv_adventure_works_sales__shopping_cart_item
 

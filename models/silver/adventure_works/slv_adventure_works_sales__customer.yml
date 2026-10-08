@@ -10,20 +10,18 @@ models:
         surfaced as-is from the source system.
 
     config:
-      access: public
-      group: it_adventure_works
       post_hook:
         - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_customer PRIMARY KEY (customer_key)"
       meta:
         atlan:
           attributes:
             ownerUsers: ["calfarol"]
-            ownerGroups: ["sales_adw"]
+            ownerGroups: ["sales_adventure_works"]
             certificateStatus: DRAFT
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
           termNames:
-            - "Customer"
+            - "Sales"
           readme: |
             # slv_adventure_works_sales__customer
 
@@ -67,7 +65,7 @@ models:
       # --- foreign keys --------------------------------------------------
       - name: person_id
         description: >
-            FK to slv_person (business_entity_id). Identifies the individual retail buyer.
+            FK to adw_core slv_person (business_entity_id). Identifies the individual retail buyer.
             Null when the customer is a store (customer_type = STORE).
         data_tests:
           - relationships:
@@ -77,7 +75,7 @@ models:
 
       - name: store_id
         description: >
-            FK to slv_store (business_entity_id). Identifies the reseller store.
+            FK to slv_adventure_works_sales__store (business_entity_id). Identifies the reseller store.
             Null when the customer is an individual (customer_type = INDIVIDUAL).
         data_tests:
           - relationships:
@@ -86,9 +84,8 @@ models:
                 field: business_entity_id
 
       - name: territory_id
-        description: "FK to slv_sales_territory. Sales territory this customer belongs to."
+        description: "FK to slv_adventure_works_sales__sales_territory. Sales territory this customer belongs to."
         data_tests:
-          - not_null
           - relationships:
               arguments:
                 to: ref('adw_core', 'brz_adventure_works_sales__sales_territory')
@@ -108,10 +105,8 @@ models:
 
       - name: account_number
         description: >
-            Source-generated account number, format AW<zero-padded customer_id>.
-            Surfaced as-is; no transformation applied. Documented as ambiguous in
-            the source (GitHub issue #34) because its derivation logic lives in the
-            source system, not in this pipeline.
+            Customer account number, derived in the source system. Surfaced as-is;
+            issue #34 flags it as ambiguous, so do not use it as a key.
 
       # --- audit ---------------------------------------------------------
       - name: customer_modified_date

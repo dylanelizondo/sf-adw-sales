@@ -1,0 +1,189 @@
+version: 2
+
+models:
+  - name: dim_orders
+    description: >
+        Gold dimension of AdventureWorks sales orders. One row per order (equal to
+        slv_adventure_works_sales__sales_order_header). Inherits the recovered order key, typed
+        dates, amounts and decoded status and channel from silver, and adds an is_shipped flag
+        plus three order-level line metrics (line count, units, revenue) taken from
+        slv_adventure_works_sales__sales_order_detail. Order lines themselves belong to
+        FACT_ORDER_LINE (issue #28).
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["calfarol"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # dim_orders
+
+            Gold dimension of AdventureWorks sales orders. One row per order (equal to slv_adventure_works_sales__sales_order_header). Inherits the recovered order key, typed dates, amounts and decoded status and channel from silver, and adds an is_shipped flag plus three order-level line metrics (line count, units, revenue) taken from slv_adventure_works_sales__sales_order_detail. Order lines themselves belong to FACT_ORDER_LINE (issue #28).
+
+            **Layer:** gold
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | ORDER_KEY | PK. Surrogate key minted in silver from the recovered order id. |
+            | SALES_ORDER_ID | Natural key. Order id recovered in silver. |
+            | SALES_ORDER_NUMBER | Order number shown to the customer. |
+            | PURCHASE_ORDER_NUMBER | Purchase order number the customer assigned. |
+            | ACCOUNT_NUMBER | Accounting account number tied to the sale. |
+            | REVISION_NUMBER | Revision number of the document. |
+            | ORDER_DATE | Date the order was placed. |
+            | DUE_DATE | Date the delivery was promised for. |
+            | SHIP_DATE | Date the order shipped. Null while it has not shipped. |
+            | IS_SHIPPED | True when ship_date is not null. |
+            | ORDER_STATUS_CODE | Original status: 1 to 6. |
+            | ORDER_STATUS_LABEL | Decoded status. |
+            | IS_ONLINE_ORDER | True when placed online. |
+            | ORDER_CHANNEL | Online or Salesperson. |
+            | CUSTOMER_ID | FK to the customer. |
+            | SALES_PERSON_ID | FK to the salesperson. Null for online orders. |
+            | TERRITORY_ID | FK to the sales territory. |
+            | BILL_TO_ADDRESS_ID | FK to the billing address. |
+            | SHIP_TO_ADDRESS_ID | FK to the shipping address. |
+            | SHIP_METHOD_ID | FK to the shipping method. |
+            | CREDIT_CARD_ID | FK to the credit card. |
+            | CURRENCY_RATE_ID | FK to the exchange rate. Null for local currency. |
+            | SUB_TOTAL | Subtotal before tax and freight. |
+            | TAX_AMT | Tax amount charged. |
+            | FREIGHT | Freight cost charged. |
+            | TOTAL_DUE | Total amount due. |
+            | ORDER_LINE_COUNT | Number of order lines. 0 when the order has none. |
+            | ORDER_TOTAL_QTY | Units ordered across all lines. |
+            | ORDER_TOTAL_REVENUE | Sum of line_total across all lines. |
+            | ORDER_MODIFIED_DATE | Last change to the order in the source system. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: order_key
+        description: "PK. Surrogate key minted in silver (md5 of the recovered order id) and inherited here, never recomputed."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: sales_order_id
+        description: "Natural key. Sales order id recovered from the corrupted source key in silver."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- identifiers -------------------------------------------------------
+      - name: sales_order_number
+        description: "Sales order number shown to the customer."
+
+      - name: purchase_order_number
+        description: "Purchase order number the customer assigned to the sale. Null for most online orders."
+
+      - name: account_number
+        description: "Accounting account number tied to the sale."
+
+      - name: revision_number
+        description: "Revision number of the document. Incremented on every change."
+
+      # --- dates ---------------------------------------------------------------
+      - name: order_date
+        description: "Date the order was placed."
+        data_tests: [not_null]
+
+      - name: due_date
+        description: "Date the delivery was promised for."
+        data_tests: [not_null]
+
+      - name: ship_date
+        description: "Date the order shipped. Null while it has not shipped."
+
+      - name: is_shipped
+        description: "True when ship_date is not null."
+        data_tests: [not_null]
+
+      # --- status and channel ----------------------------------------------------
+      - name: order_status_code
+        description: "Original order status: 1 in process, 2 approved, 3 backordered, 4 rejected, 5 shipped, 6 cancelled."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6]
+
+      - name: order_status_label
+        description: "Human-readable order status, decoded in silver from order_status_code."
+
+      - name: is_online_order
+        description: "True when the order was placed online, false when a salesperson placed it."
+
+      - name: order_channel
+        description: "Sales channel, Online or Salesperson, decoded in silver."
+
+      # --- foreign keys ----------------------------------------------------------
+      - name: customer_id
+        description: "FK to the customer the order belongs to."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_adventure_works_sales__customer')
+                field: customer_id
+
+      - name: sales_person_id
+        description: "FK to the assigned salesperson. Null for online orders."
+
+      - name: territory_id
+        description: "FK to the sales territory."
+
+      - name: bill_to_address_id
+        description: "FK to the billing address."
+
+      - name: ship_to_address_id
+        description: "FK to the shipping address."
+
+      - name: ship_method_id
+        description: "FK to the shipping method."
+
+      - name: credit_card_id
+        description: "FK to the credit card. Null when no card was used."
+
+      - name: currency_rate_id
+        description: "FK to the exchange rate applied. Null for sales in local currency."
+
+      # --- amounts -----------------------------------------------------------------
+      - name: sub_total
+        description: "Order subtotal before tax and freight."
+
+      - name: tax_amt
+        description: "Tax amount charged on the order."
+
+      - name: freight
+        description: "Freight cost charged on the order."
+
+      - name: total_due
+        description: "Total amount due on the order (subtotal + tax + freight)."
+        data_tests: [not_null]
+
+      # --- order-level line metrics ----------------------------------------------------
+      - name: order_line_count
+        description: "Number of lines in slv_adventure_works_sales__sales_order_detail for this order. 0 when the order has none."
+        data_tests: [not_null]
+
+      - name: order_total_qty
+        description: "Units ordered across all lines of the order."
+        data_tests: [not_null]
+
+      - name: order_total_revenue
+        description: "Sum of line_total across all lines of the order."
+        data_tests: [not_null]
+
+      # --- audit -------------------------------------------------------------------
+      - name: order_modified_date
+        description: "Last change to the order in the source system."

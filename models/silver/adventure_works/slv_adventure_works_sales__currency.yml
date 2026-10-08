@@ -1,0 +1,77 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__currency
+    description: >
+        Silver lookup of currencies identified by ISO 4217 code. One row per currency, same grain as
+        bronze: 105 rows, no aggregation and no filtering.
+
+        Carried over from bronze (ADVENTURE_WORKS.SALES.CURRENCY): the source holds the full ISO list,
+        not only the currencies AdventureWorks actually trades in. Only 14 of the 105 appear as a
+        target in slv_adventure_works_sales__currency_rate, and only 6 are reachable from an order, so a join from a
+        fact table will always hit a small subset of this dimension.
+
+        Changes against bronze:
+          - MODIFIED_DATE cast TEXT -> DATE (source writes 'YYYY-MM-DD' as text).
+          - NAME renamed to CURRENCY_NAME. NAME is too generic to survive a join downstream; the
+            rename happens once here instead of in every gold model.
+          - _LOADED_AT / _SOURCE_RELATION added as audit columns.
+        Nothing dropped: this table has no ROWGUID and no all-NULL columns.
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["dylan.ea"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Currency"
+          readme: |
+            # slv_adventure_works_sales__currency
+
+            Silver lookup of currencies identified by ISO 4217 code (ADVENTURE_WORKS.SALES.CURRENCY).
+            One row per currency, same grain as bronze: 105 rows, no aggregation and no filtering --
+            the full ISO list, not only the currencies AdventureWorks actually trades in. NAME renamed
+            to CURRENCY_NAME, since NAME is too generic to survive a join downstream.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | CURRENCY_CODE | PK. ISO 4217 code of the currency, always 3 characters. |
+            | CURRENCY_NAME | Name of the currency. Source column NAME, renamed since NAME is too generic to survive a join downstream. |
+            | MODIFIED_DATE | Date of the last change to the record in the source system, cast from text. |
+            | _LOADED_AT | Audit. UTC timestamp of the dbt run that built this row. |
+            | _SOURCE_RELATION | Audit. Fully qualified bronze relation this row was read from. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+      - name: currency_code
+        description: "PK. ISO 4217 code of the currency, always 3 characters. 105 distinct values, no duplicates."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: currency_name
+        description: "Name of the currency. Source column NAME. 105 distinct values, none NULL."
+        data_tests: [not_null]
+
+      - name: modified_date
+        description: >
+            Date of the last change to the record in the source system, cast from TEXT.
+            Not usable as a watermark: the source load stamped every row with 2026-09-17, so the
+            column is constant across the whole database. The not_null test is what makes a failed
+            cast visible, since to_silver_date returns NULL rather than aborting.
+        data_tests: [not_null]
+
+      - name: _loaded_at
+        description: "Audit. UTC timestamp of the dbt run that built this row."
+        data_tests: [not_null]
+      - name: _source_relation
+        description: "Audit. Fully qualified bronze relation this row was read from."
+        data_tests: [not_null]

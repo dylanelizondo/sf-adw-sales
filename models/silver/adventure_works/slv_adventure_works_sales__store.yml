@@ -15,6 +15,46 @@ models:
       # Safe to re-run only because this is a table -- every run issues CREATE OR REPLACE.
       post_hook:
         - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_adventure_works_sales__store PRIMARY KEY (store_key)"
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["dylan.ea"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Store"
+          readme: |
+            # slv_adventure_works_sales__store
+
+            Reseller stores that buy from AdventureWorks over ADVENTURE_WORKS.SALES.STORE, with the
+            salesperson who serves each one. One row per store (701). Mints store_key from
+            business_entity_id and shreds the StoreSurvey demographics XML (answered by every store)
+            into typed store_* columns so gold doesn't carry XML parsing.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | STORE_KEY | PK. Surrogate key, md5 of business_entity_id. |
+            | BUSINESS_ENTITY_ID | Natural key. PK of SALES.STORE and FK to PERSON.BUSINESS_ENTITY. |
+            | STORE_NAME | Name of the reseller store. Not unique: 2 pairs of stores share a name. |
+            | SALES_PERSON_ID | FK to the salesperson who serves this store. |
+            | STORE_ANNUAL_SALES | Self-reported annual sales in dollars. |
+            | STORE_ANNUAL_REVENUE | Self-reported annual revenue in dollars. |
+            | STORE_BANK_NAME | Self-reported bank used by the store. |
+            | STORE_BUSINESS_TYPE | Self-reported business type code: BM, OS, or BS. |
+            | STORE_YEAR_OPENED | Year the store opened. Observed range 1970-2001. |
+            | STORE_SPECIALTY | Self-reported product specialty: Road, Mountain, or Touring. |
+            | STORE_SQUARE_FEET | Self-reported store size in square feet. |
+            | STORE_BRAND_COUNT | Self-reported number of brands carried, as text (for example "2", "4+", "AW"). |
+            | STORE_INTERNET_CONNECTION_TYPE | Self-reported internet connection type: ISDN, DSL, T1, T2, or T3. |
+            | STORE_NUMBER_EMPLOYEES | Self-reported employee count. |
+            | STORE_MODIFIED_DATE | Last change to this store in the source system, cast from text. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
 
     columns:
 

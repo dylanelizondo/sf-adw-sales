@@ -11,19 +11,16 @@ models:
         No rows are synthesised or closed here; point-in-time snapshots belong in gold.
 
     config:
-      access: public
-      group: it_adventure_works
       meta:
         atlan:
           attributes:
             ownerUsers: ["calfarol"]
-            ownerGroups: ["sales_adw"]
+            ownerGroups: ["sales_adventure_works"]
             certificateStatus: DRAFT
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
           termNames:
-            - "Sales Territory"
-            - "Sales Person"
+            - "Sales"
           readme: |
             # slv_adventure_works_sales__sales_territory_history
 
@@ -37,8 +34,8 @@ models:
 
             | Column | Description |
             | --- | --- |
-            | BUSINESS_ENTITY_ID | Part of composite PK. FK to slv_sales_person. |
-            | TERRITORY_ID | Part of composite PK. FK to slv_sales_territory. |
+            | BUSINESS_ENTITY_ID | Part of composite PK. FK to slv_adventure_works_sales__sales_person. |
+            | TERRITORY_ID | Part of composite PK. FK to slv_adventure_works_sales__sales_territory. |
             | START_DATE | Part of composite PK. Date the salesperson took over the territory. |
             | END_DATE | Date the salesperson left the territory. NULL = current assignment. |
             | IS_CURRENT_ASSIGNMENT | True when end_date is NULL. |
@@ -56,14 +53,14 @@ models:
 
       - name: business_entity_id
         description: >
-            Part of the composite PK. FK to slv_sales_person (business_entity_id).
+            Part of the composite PK. FK to slv_adventure_works_sales__sales_person (business_entity_id).
             The salesperson assigned to the territory.
         data_tests:
           - not_null
 
       - name: territory_id
         description: >
-            Part of the composite PK. FK to slv_sales_territory. The territory the
+            Part of the composite PK. FK to slv_adventure_works_sales__sales_territory. The territory the
             salesperson was assigned to.
         data_tests:
           - not_null

@@ -10,19 +10,16 @@ models:
         alone identifies a row.
 
     config:
-      access: public
-      group: it_adventure_works
       meta:
         atlan:
           attributes:
             ownerUsers: ["calfarol"]
-            ownerGroups: ["sales_adw"]
+            ownerGroups: ["sales_adventure_works"]
             certificateStatus: DRAFT
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
           termNames:
-            - "Currency"
-            - "Country Region"
+            - "Sales"
           readme: |
             # slv_adventure_works_sales__country_region_currency
 
@@ -57,7 +54,7 @@ models:
 
       - name: currency_code
         description: >
-            Part of the composite PK. FK to slv_currency. ISO-4217 three-letter currency
+            Part of the composite PK. FK to slv_sales__currency. ISO-4217 three-letter currency
             code (e.g. USD, EUR, GBP).
         data_tests:
           - not_null

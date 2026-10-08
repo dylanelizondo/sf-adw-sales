@@ -15,6 +15,41 @@ models:
       # issues CREATE OR REPLACE.
       post_hook:
         - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_adventure_works_sales__special_offer PRIMARY KEY (special_offer_key)"
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["dylan.ea"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Special Offer"
+          readme: |
+            # slv_adventure_works_sales__special_offer
+
+            Lookup of promotions and discounts over ADVENTURE_WORKS.SALES.SPECIAL_OFFER, with
+            validity dates and the quantity range each one applies to. One row per promotion (16).
+            Mints special_offer_key from special_offer_id so gold never has to recompute it.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | SPECIAL_OFFER_KEY | PK. Surrogate key, md5 of special_offer_id. |
+            | SPECIAL_OFFER_ID | Natural key. PK of SALES.SPECIAL_OFFER. |
+            | SPECIAL_OFFER_DESCRIPTION | Description of the promotion, for example "Volume Discount 11 to 14". |
+            | SPECIAL_OFFER_DISCOUNT_PCT | Discount percentage granted by the promotion, as a decimal fraction. |
+            | SPECIAL_OFFER_TYPE | Promotion type, for example Volume Discount, Seasonal Discount, New Product. |
+            | SPECIAL_OFFER_CATEGORY | Audience the promotion targets: Reseller, Customer, or No Discount. |
+            | SPECIAL_OFFER_START_DATE | Date the record became effective, cast from text. |
+            | SPECIAL_OFFER_END_DATE | Date the record stopped being effective, cast from text. Null while a promotion is current. |
+            | SPECIAL_OFFER_MIN_QTY | Minimum quantity for the promotion to apply. |
+            | SPECIAL_OFFER_MAX_QTY | Maximum quantity the promotion applies up to. Null when there's no cap. |
+            | SPECIAL_OFFER_MODIFIED_DATE | Last change to this promotion in the source system, cast from text. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
 
     columns:
 

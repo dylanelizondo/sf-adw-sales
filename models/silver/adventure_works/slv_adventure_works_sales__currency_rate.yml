@@ -1,0 +1,138 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__currency_rate
+    description: >
+        Silver daily exchange rates, USD to a target currency. One row per date + currency pair, same
+        grain as bronze: 13,532 rows, no aggregation and no filtering. FROM_CURRENCY_CODE is 'USD' on
+        all 13,532 rows; the table is effectively a USD-to-X rate series across 14 target currencies
+        and 1,097 consecutive days (2011-05-31 to 2014-05-31).
+
+        WHAT CURRENCY_RATE_DATE MEANS. It is the day the rate applies to, and in the source model it
+        is also the day the referencing order was placed: SALES_ORDER_HEADER.CURRENCY_RATE_ID points
+        at the rate row dated the same day as that order's ORDER_DATE. It is not a separate
+        settlement or booking date.
+
+        THAT ALIGNMENT IS BROKEN IN THE CURRENT DATA, and this model does not repair it. The source
+        load (shift_dates_2026.sql) reassigned every ORDER_DATE to a *random* day in the current year
+        and left this table's business dates untouched, so:
+          - rates cover 2011-05-31 to 2014-05-31 while orders sit in 2026-01-01 to 2026-09-04;
+          - 0 of the 13,976 orders that carry a CURRENCY_RATE_ID have a rate dated on their
+            ORDER_DATE, and none of the 31,465 orders has a rate for its order date at all;
+          - the ID to date mapping is no longer a function of the order date -- a single
+            CURRENCY_RATE_ID is now referenced by orders on up to 38 different order dates
+            (5.46 on average), so the date cannot be re-derived from the orders.
+        Consequence for downstream models: join orders to rates on CURRENCY_RATE_ID only, which
+        resolves on 100% of rows. A date-effective join on (ORDER_DATE, currency) returns nothing.
+        See docs/backlog-silver-sales.md, open decision 1.
+
+        Changes against bronze:
+          - CURRENCY_RATE_DATE and MODIFIED_DATE cast TEXT -> DATE.
+          - AVERAGE_RATE and END_OF_DAY_RATE cast FLOAT -> NUMBER(19,6).
+          - CURRENCY_RATE_ID cast to NUMBER(38,0).
+          - _LOADED_AT / _SOURCE_RELATION added as audit columns.
+        Nothing dropped: this table has no ROWGUID and no all-NULL columns.
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["dylan.ea"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Currency Rate"
+            - "Currency"
+          readme: |
+            # slv_adventure_works_sales__currency_rate
+
+            Silver daily exchange rates, USD to a target currency (ADVENTURE_WORKS.SALES.CURRENCY_RATE).
+            One row per date + currency pair, 13,532 rows across 14 target currencies and 1,097
+            consecutive days (2011-05-31 to 2014-05-31). The 2026 source date-shift broke the
+            alignment between CURRENCY_RATE_DATE and order dates: join orders to rates on
+            CURRENCY_RATE_ID only, never on a date-effective join.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | CURRENCY_RATE_ID | PK. Surrogate key of the rate. |
+            | CURRENCY_RATE_DATE | Business date the rate applies to, cast from text. No longer aligned with order dates after the 2026 source date-shift. |
+            | FROM_CURRENCY_CODE | FK to slv_adventure_works_sales__currency. Source currency of the conversion; 'USD' on every row. |
+            | TO_CURRENCY_CODE | FK to slv_adventure_works_sales__currency. Target currency of the conversion. |
+            | AVERAGE_RATE | Average exchange rate for the day, from 1 unit of FROM_CURRENCY_CODE. |
+            | END_OF_DAY_RATE | Exchange rate at the close of the day, from 1 unit of FROM_CURRENCY_CODE. |
+            | MODIFIED_DATE | Date of the last change to the record in the source system, cast from text. |
+            | _LOADED_AT | Audit. UTC timestamp of the dbt run that built this row. |
+            | _SOURCE_RELATION | Audit. Fully qualified bronze relation this row was read from. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+      - name: currency_rate_id
+        description: "PK. Surrogate key of the rate. 13,532 distinct values in 13,532 rows."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: currency_rate_date
+        description: >
+            Business date the rate applies to, cast from TEXT. In the source this equals the
+            ORDER_DATE of the orders that reference the row -- an equality that no longer holds in the
+            current data; see the model description. 1,097 consecutive days, 2011-05-31 to 2014-05-31.
+            The not_null test is what makes a failed cast visible, since to_silver_date returns NULL
+            rather than aborting.
+        data_tests: [not_null]
+
+      - name: from_currency_code
+        description: "FK to slv_adventure_works_sales__currency. Source currency of the conversion. 'USD' on all 13,532 rows."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_adventure_works_sales__currency')
+                field: currency_code
+          # Warn, not error: a second base currency appearing upstream is a change worth
+          # noticing, not a defect that should stop the build.
+          - accepted_values:
+              arguments:
+                values: ["USD"]
+              config:
+                severity: warn
+
+      - name: to_currency_code
+        description: >
+            FK to slv_adventure_works_sales__currency. Target currency of the conversion. 14 distinct values, of which
+            only 6 (AUD, CAD, GBP, EUR, DEM, FRF) are reachable from a sales order.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_adventure_works_sales__currency')
+                field: currency_code
+
+      - name: average_rate
+        description: "Average exchange rate for the day, from 1 unit of FROM_CURRENCY_CODE. No NULLs in source."
+        data_tests: [not_null]
+
+      - name: end_of_day_rate
+        description: "Exchange rate at the close of the day, from 1 unit of FROM_CURRENCY_CODE. No NULLs in source."
+        data_tests: [not_null]
+
+      - name: modified_date
+        description: >
+            Date of the last change to the record in the source system, cast from TEXT.
+            Not usable as a watermark: the source load stamped every row with 2026-09-17. This is the
+            only date column in this table that the 2026 load rewrote -- CURRENCY_RATE_DATE was left
+            in 2011-2014.
+        data_tests: [not_null]
+
+      - name: _loaded_at
+        description: "Audit. UTC timestamp of the dbt run that built this row."
+        data_tests: [not_null]
+      - name: _source_relation
+        description: "Audit. Fully qualified bronze relation this row was read from."
+        data_tests: [not_null]
