@@ -1,0 +1,57 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__sales_territory
+    description: "Silver model for SALES_TERRITORY. Cleans and types raw sales territory data, including YTD/last year sales and cost snapshots."
+    columns:
+      - name: territory_id
+        description: "Unique identifier for each sales territory (primary key)."
+        tests:
+          - unique
+          - not_null
+
+      - name: name
+        description: "Name of the sales territory."
+        tests:
+          - not_null
+
+      - name: country_region_code
+        description: "ISO country/region code associated with this territory."
+        tests:
+          - not_null
+
+      - name: territory_group
+        description: "Geographic group this territory belongs to. Renamed from the source's GROUP column, which is a reserved word in Snowflake."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['Europe', 'North America', 'Pacific']
+
+      - name: sales_ytd
+        description: "Year-to-date sales total for this territory. Pre-aggregated snapshot from the source system — not to be used as a live metric in gold."
+        tests:
+          - not_null
+
+      - name: sales_last_year
+        description: "Prior year sales total for this territory. Pre-aggregated snapshot from the source system — not to be used as a live metric in gold."
+        tests:
+          - not_null
+
+      - name: cost_ytd
+        description: "Year-to-date cost total for this territory. Pre-aggregated snapshot from the source system — not to be used as a live metric in gold."
+        tests:
+          - not_null
+
+      - name: cost_last_year
+        description: "Prior year cost total for this territory. Pre-aggregated snapshot from the source system — not to be used as a live metric in gold."
+        tests:
+          - not_null
+
+      - name: modified_date
+        description: "Last modification date of the original record, cast to DATE type."
+
+      - name: _loaded_at
+        description: "Timestamp of when this row was loaded into the silver layer."
+
+      - name: _source_relation
+        description: "Source table this record was loaded from."

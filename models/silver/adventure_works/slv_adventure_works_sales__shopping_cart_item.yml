@@ -1,0 +1,95 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__shopping_cart_item
+    description: >
+        Silver table over ADVENTURE_WORKS.SALES.SHOPPING_CART_ITEM. One row per cart
+        item. Items sitting in online shopping carts that have not yet been turned into
+        an order. The source contains only 3 rows (active carts at snapshot time); the
+        model is materialised as a table to maintain the uniform silver contract —
+        the row count is not a reason to skip the layer.
+
+    config:
+      access: public
+      group: it_adventure_works
+      post_hook:
+        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_shopping_cart_item PRIMARY KEY (shopping_cart_item_key)"
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["calfarol"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Shopping Cart"
+          readme: |
+            # slv_adventure_works_sales__shopping_cart_item
+
+            Silver table over ADVENTURE_WORKS.SALES.SHOPPING_CART_ITEM. One row per cart item.
+            Items sitting in online shopping carts not yet converted to an order. The source
+            contains only 3 rows (active carts at snapshot time); the model is materialised
+            as a table to maintain the uniform silver contract.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | SHOPPING_CART_ITEM_KEY | PK. Surrogate key, md5 of shopping_cart_item_id. |
+            | SHOPPING_CART_ITEM_ID | Natural key. Unique identifier of the cart item. |
+            | SHOPPING_CART_ID | Cart session identifier. |
+            | QUANTITY | Units of the product in the cart. |
+            | PRODUCT_ID | FK to PRODUCTION.PRODUCT. |
+            | DATE_CREATED | Date the item was added to the cart. Cast to DATE. |
+            | SHOPPING_CART_ITEM_MODIFIED_DATE | Last change timestamp, cast to TIMESTAMP_NTZ. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ----------------------------------------------------------
+      - name: shopping_cart_item_key
+        description: >
+            PK. Surrogate key, md5 of shopping_cart_item_id. Inherited by gold.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: shopping_cart_item_id
+        description: "Natural key. Unique identifier of the cart item."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- attributes ----------------------------------------------------
+      - name: shopping_cart_id
+        description: >
+            Identifier of the cart, tied to the user session. Not a FK to a
+            persisted entity in this dataset.
+        data_tests:
+          - not_null
+
+      - name: quantity
+        description: "Units of the product in the cart. Must be at least 1."
+        data_tests:
+          - not_null
+
+      - name: product_id
+        description: "FK to PRODUCTION.PRODUCT. Product the item refers to."
+        data_tests:
+          - not_null
+
+      # --- dates ---------------------------------------------------------
+      - name: date_created
+        description: >
+            Date the item was added to the cart. Cast from text to DATE.
+        data_tests:
+          - not_null
+
+      # --- audit ---------------------------------------------------------
+      - name: shopping_cart_item_modified_date
+        description: >
+            Timestamp of the last change to the record in the source system.
+            Cast from text to TIMESTAMP_NTZ.
