@@ -9,10 +9,6 @@ models:
         rather than re-joining STORE and PERSON separately.
 
     config:
-      access: public
-      group: it_adventure_works
-      post_hook:
-        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_dim_store PRIMARY KEY (store_key)"
       meta:
         atlan:
           attributes:

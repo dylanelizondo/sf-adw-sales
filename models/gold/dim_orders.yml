@@ -12,10 +12,6 @@ models:
         line-level detail is required.
 
     config:
-      access: public
-      group: it_adventure_works
-      post_hook:
-        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_dim_orders PRIMARY KEY (order_key)"
       meta:
         atlan:
           attributes:
