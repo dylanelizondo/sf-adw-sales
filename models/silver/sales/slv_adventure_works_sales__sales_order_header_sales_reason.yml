@@ -1,0 +1,83 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__sales_order_header_sales_reason
+    description: >
+        Bridge between sales orders and the reasons recorded for the purchase, cleaned and typed.
+        One row per order and reason; an order can carry several reasons. The corrupted order key
+        is recovered with recover_sales_order_id and the reason key and date are cast. Rows whose
+        keys cannot be parsed are dropped; a row-count test against bronze makes any loss fail
+        the build.
+
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            columns: [sales_order_id, sales_reason_id]
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["mlara"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # slv_adventure_works_sales__sales_order_header_sales_reason
+
+            Bridge between sales orders and the reasons recorded for the purchase, cleaned and typed. One row per order and reason; an order can carry several reasons. The corrupted order key is recovered with recover_sales_order_id and the reason key and date are cast. Rows whose keys cannot be parsed are dropped; a row-count test against bronze makes any loss fail the build.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | SALES_ORDER_SALES_REASON_KEY | Surrogate key, md5 of the (sales_order_id, sales_reason_id) pair, built the same way as dbt_utils.generate_surrogate_key. |
+            | SALES_ORDER_ID | Part of the composite key. FK to the sales order header. Recovered from the corrupted source key with recover_sales_order_id. |
+            | SALES_REASON_ID | Part of the composite key. FK to the sales reason lookup. |
+            | MODIFIED_DATE | Date of the last change to the record in the source system, cast to DATE with to_silver_date. |
+            | _LOADED_AT | UTC timestamp of when this row was built in the silver layer. |
+            | _SOURCE_RELATION | Bronze model this row was read from. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: sales_order_sales_reason_key
+        description: "Surrogate key, md5 of the (sales_order_id, sales_reason_id) pair, built the same way as dbt_utils.generate_surrogate_key."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: sales_order_id
+        description: "Part of the composite key. FK to the sales order header. Recovered from the corrupted source key with recover_sales_order_id."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_adventure_works_sales__sales_order_header')
+                field: sales_order_id
+
+      - name: sales_reason_id
+        description: "Part of the composite key. FK to the sales reason lookup."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_adventure_works_sales__sales_reason')
+                field: sales_reason_id
+
+      # --- audit -------------------------------------------------------------
+      - name: modified_date
+        description: "Date of the last change to the record in the source system, cast to DATE with to_silver_date."
+        data_tests: [not_null]
+
+      - name: _loaded_at
+        description: "UTC timestamp of when this row was built in the silver layer."
+
+      - name: _source_relation
+        description: "Bronze model this row was read from."

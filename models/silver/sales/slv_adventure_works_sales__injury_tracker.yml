@@ -8,6 +8,46 @@ models:
         event date are cast, and the day counts are cast to whole numbers. Rows without a
         report number are dropped.
 
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["mlara"]
+            ownerGroups: ["sales_adw"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # slv_adventure_works_sales__injury_tracker
+
+            Log of workplace injuries and safety events with their OSHA classification, cleaned and typed. One row per safety event report. Text is trimmed, the report timestamp and event date are cast, and the day counts are cast to whole numbers. Rows without a report number are dropped.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | INJURY_TRACKER_KEY | Surrogate key, md5 of report_number, built the same way as the other silver surrogate keys. |
+            | REPORT_NUMBER | Natural key. Report number of the safety event, trimmed. |
+            | CREATED_AT | Date and time the report was captured, as a TIMESTAMP_NTZ. |
+            | DATE_OCCURRED | Date the event happened, as a DATE. |
+            | EVENT_TYPE | Type of safety event reported. |
+            | EVENT_REPORT_TITLE | Short title of the report. |
+            | SAFETY_INCIDENT_DESCRIPTION | Narrative description of the incident. |
+            | OSHA_CLASSIFICATION | Classification of the event under OSHA rules. |
+            | DEPARTMENT | Department where the event happened. |
+            | LOCATION_OF_EVENT | Physical location where the event happened. |
+            | NATURE_OF_INJURY | Nature of the injury sustained. |
+            | REGION_OF_BODY | Part of the body affected. |
+            | DAYS_RESTRICTED | Days of restricted work resulting from the event, cast to a whole number. |
+            | DAYS_LOST | Days of work lost resulting from the event, cast to a whole number. |
+            | _LOADED_AT | UTC timestamp of when this row was built in the silver layer. |
+            | _SOURCE_RELATION | Bronze model this row was read from. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
     columns:
 
       # --- keys ------------------------------------------------------------
@@ -25,11 +65,11 @@ models:
 
       # --- when --------------------------------------------------------------
       - name: created_at
-        description: "Date and time the report was captured, cast to TIMESTAMP_NTZ with to_silver_ts."
+        description: "Date and time the report was captured, as a TIMESTAMP_NTZ."
         data_tests: [not_null]
 
       - name: date_occurred
-        description: "Date the event happened, cast to DATE with to_silver_date."
+        description: "Date the event happened, as a DATE."
         data_tests: [not_null]
 
       # --- what happened -------------------------------------------------------
