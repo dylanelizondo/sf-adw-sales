@@ -1,7 +1,7 @@
 -- slv_customer
 -- ONE row per customer. 19,820 = Sales.Customer. THIS ROW COUNT IS THE CONTRACT.
 --
--- Resolves the customer_type ambiguity: PERSON_ID and STORE_ID are mutually
+-- Resolves the customer_type ambiguity: PERSON_ID and STORE_ID are meant to be mutually
 -- exclusive in practice (635 rows carry both in the source — those are treated
 -- as STORE customers because the store relationship is the authoritative sales
 -- entity). account_number is surfaced as-is; it is derived by the source system
@@ -28,8 +28,7 @@ select
         else 'UNKNOWN'
     end as customer_type,
 
-    -- account_number: source-generated identifier, kept as-is.
-    -- Format AW<zero-padded customer_id>; no transformations applied.
+    -- account_number: derived in the source system and ambiguous (issue #34), kept as-is.
     account_number,
 
     -- audit ---------------------------------------------------------------

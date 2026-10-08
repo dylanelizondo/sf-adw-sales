@@ -10,8 +10,6 @@ models:
         from SALES_ORDER_DETAIL.
 
     config:
-      access: public
-      group: it_adventure_works
       meta:
         atlan:
           attributes:
@@ -21,8 +19,7 @@ models:
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
           termNames:
-            - "Special Offer"
-            - "Product"
+            - "Sales"
           readme: |
             # slv_adventure_works_sales__special_offer_product
 
@@ -36,7 +33,7 @@ models:
 
             | Column | Description |
             | --- | --- |
-            | SPECIAL_OFFER_ID | Part of composite PK. FK to slv_special_offer. |
+            | SPECIAL_OFFER_ID | Part of composite PK. FK to slv_adventure_works_sales__special_offer. |
             | PRODUCT_ID | Part of composite PK. FK to PRODUCTION.PRODUCT. |
             | ROWGUID | Source GUID for replication traceability. |
             | SPECIAL_OFFER_PRODUCT_MODIFIED_DATE | Last change timestamp, cast to TIMESTAMP_NTZ. |
@@ -52,7 +49,7 @@ models:
 
       - name: special_offer_id
         description: >
-            Part of the composite PK. FK to slv_special_offer. Identifies the promotion.
+            Part of the composite PK. FK to slv_adventure_works_sales__special_offer. Identifies the promotion.
         data_tests:
           - not_null
 
