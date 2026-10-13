@@ -3,14 +3,11 @@ version: 2
 models:
   - name: dim_client
     description: >
-        Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to
-        slv_adventure_works_sales__customer). Inherits client_key from silver and adds the
-        client's display name: the store name for reseller stores and the person's full name for
-        individual customers. Individual clients also carry a few non-sensitive self-reported
-        attributes from adw_core's slv_person (age band, education, occupation, children, cars,
-        home ownership); stores never do. Email, phone and the sensitive survey answers (gender,
-        marital status, income band) are deliberately left out. Join dim_orders on customer_id and
-        dim_store on store_id; store details live in dim_store.
+        Gold dimension of AdventureWorks clients. One row per customer, equal to
+        brz_adventure_works_sales__customer. A plain select over bronze with no joins: it carries
+        the customer keys, the account number, the three foreign keys and the modified date. The
+        client name, client type and individual attributes are not part of it; they need joins and
+        belong to silver. Join dim_orders on customer_id and dim_store on store_id.
 
     config:
       meta:
@@ -26,39 +23,35 @@ models:
           readme: |
             # dim_client
 
-            Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to slv_adventure_works_sales__customer). Inherits client_key from silver and adds the client's display name: the store name for reseller stores and the person's full name for individual customers. Individual clients also carry a few non-sensitive self-reported attributes from adw_core's slv_person (age band, education, occupation, children, cars, home ownership); stores never do. Email, phone and the sensitive survey answers (gender, marital status, income band) are deliberately left out. Join dim_orders on customer_id and dim_store on store_id; store details live in dim_store.
+            Gold dimension of AdventureWorks clients. One row per customer, equal to brz_adventure_works_sales__customer. A plain select over bronze with no joins: it carries the customer keys, the account number, the three foreign keys and the modified date. The client name, client type and individual attributes are not part of it; they need joins and belong to silver. Join dim_orders on customer_id and dim_store on store_id.
 
             **Layer:** gold
             **Subject area:** Sales
 
             | Column | Description |
             | --- | --- |
-            | CLIENT_KEY | PK. Surrogate key minted in silver (md5 of the customer id) and inherited here, never recomputed. |
+            | CLIENT_SK | Sequential integer key, row_number ordered by customer_id. A view recomputes it on every query, so it stays stable while customers are only added at the end; it is not a stored autoincrement. Join on client_key or customer_id when stability matters. |
+            | CLIENT_KEY | PK. Surrogate key, md5 of the customer id, built like the silver customer_key so both layers give the same value. |
             | CUSTOMER_ID | Natural key. Unique identifier of the customer in the source system; the column dim_orders joins on. |
-            | CLIENT_TYPE | Client classification from silver. INDIVIDUAL when only a person is set, STORE when a store is set (a store wins over a person for the 635 ambiguous rows), UNKNOWN when neither is set. |
-            | CLIENT_NAME | Display name: the store name for STORE clients, the person's full name for INDIVIDUAL clients, 'Unknown' when neither is available (the dim_client__every_client_has_a_name test fails if that happens). Contains personal names for individuals. |
             | CLIENT_ACCOUNT_NUMBER | Customer account number, derived in the source system. Surfaced as-is; issue #34 flags it as ambiguous, so do not use it as a key. Not the order account number carried by dim_orders. |
-            | CLIENT_HAS_DEMOGRAPHICS_SURVEY | True when the individual's survey holds real answers rather than an empty form. Null for stores. |
-            | CLIENT_AGE_BAND | Banded age derived from the survey birth date; the raw birth date is not exposed. Self-reported. Individuals with a survey only. |
-            | CLIENT_EDUCATION | Highest education band reached, from Partial High School to Graduate Degree. Self-reported. |
-            | CLIENT_EDUCATION_SORT | Display order for client_education, 1 to 5. |
-            | CLIENT_OCCUPATION | Occupation category: Clerical, Manual, Skilled Manual, Professional or Management. Self-reported. |
-            | CLIENT_TOTAL_CHILDREN | Total number of children. Self-reported. |
-            | CLIENT_NUMBER_CARS_OWNED | Number of cars owned. Self-reported. |
-            | CLIENT_IS_HOME_OWNER | Home ownership. Self-reported. |
             | STORE_ID | FK to dim_store (business_entity_id). Set when the client is a reseller store, null for individuals. |
-            | PERSON_ID | FK to the person behind an individual customer (business_entity_id in adw_core's slv_person). Null for store-only customers. |
+            | PERSON_ID | FK to the person behind an individual customer. Null for store-only customers. |
             | TERRITORY_ID | FK to the sales territory the client belongs to. Will join to dim_territory once #26 is built. |
-            | PRIMARY_ADDRESS_ID | FK to the client's winning address, taken from slv_person. Will join to dim_address once #27 is built. Individual clients only; null for stores and for people with no address. |
-            | CLIENT_MODIFIED_DATE | Last change to the customer record in the source system. |
+            | CLIENT_MODIFIED_DATE | Last change to the customer record in the source system, cast from text to a timestamp. |
 
             _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
 
     columns:
 
       # --- keys ------------------------------------------------------------
+      - name: client_sk
+        description: "Sequential integer key, row_number ordered by customer_id. A view recomputes it on every query, so it stays stable while customers are only added at the end; it is not a stored autoincrement. Join on client_key or customer_id when stability matters."
+        data_tests:
+          - unique
+          - not_null
+
       - name: client_key
-        description: "PK. Surrogate key minted in silver (md5 of the customer id) and inherited here, never recomputed."
+        description: "PK. Surrogate key, md5 of the customer id, built like the silver customer_key so both layers give the same value."
         data_tests:
           - unique
           - not_null
@@ -70,44 +63,8 @@ models:
           - not_null
 
       # --- client --------------------------------------------------------------
-      - name: client_type
-        description: "Client classification from silver. INDIVIDUAL when only a person is set, STORE when a store is set (a store wins over a person for the 635 ambiguous rows), UNKNOWN when neither is set."
-        data_tests:
-          - not_null
-          - accepted_values:
-              arguments:
-                values: ["INDIVIDUAL", "STORE", "UNKNOWN"]
-
-      - name: client_name
-        description: "Display name: the store name for STORE clients, the person's full name for INDIVIDUAL clients, 'Unknown' when neither is available (the dim_client__every_client_has_a_name test fails if that happens). Contains personal names for individuals."
-
       - name: client_account_number
         description: "Customer account number, derived in the source system. Surfaced as-is; issue #34 flags it as ambiguous, so do not use it as a key. Not the order account number carried by dim_orders."
-
-      # --- individual clients only (null for stores) ---------------------------------
-      - name: client_has_demographics_survey
-        description: "True when the individual's survey holds real answers rather than an empty form. Null for stores."
-
-      - name: client_age_band
-        description: "Banded age derived from the survey birth date; the raw birth date is not exposed. Self-reported. Individuals with a survey only."
-
-      - name: client_education
-        description: "Highest education band reached, from Partial High School to Graduate Degree. Self-reported."
-
-      - name: client_education_sort
-        description: "Display order for client_education, 1 to 5."
-
-      - name: client_occupation
-        description: "Occupation category: Clerical, Manual, Skilled Manual, Professional or Management. Self-reported."
-
-      - name: client_total_children
-        description: "Total number of children. Self-reported."
-
-      - name: client_number_cars_owned
-        description: "Number of cars owned. Self-reported."
-
-      - name: client_is_home_owner
-        description: "Home ownership. Self-reported."
 
       # --- foreign keys ------------------------------------------------------------
       - name: store_id
@@ -115,15 +72,15 @@ models:
         data_tests:
           - relationships:
               arguments:
-                to: ref('slv_adventure_works_sales__store')
+                to: ref('adw_core', 'brz_adventure_works_sales__store')
                 field: business_entity_id
 
       - name: person_id
-        description: "FK to the person behind an individual customer (business_entity_id in adw_core's slv_person). Null for store-only customers."
+        description: "FK to the person behind an individual customer. Null for store-only customers."
         data_tests:
           - relationships:
               arguments:
-                to: ref('adw_core', 'slv_person')
+                to: ref('adw_core', 'brz_adventure_works_person__person')
                 field: business_entity_id
 
       - name: territory_id
@@ -131,12 +88,9 @@ models:
         data_tests:
           - relationships:
               arguments:
-                to: ref('slv_adventure_works_sales__sales_territory')
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_territory')
                 field: territory_id
-
-      - name: primary_address_id
-        description: "FK to the client's winning address, taken from slv_person. Will join to dim_address once #27 is built. Individual clients only; null for stores and for people with no address."
 
       # --- audit -------------------------------------------------------------
       - name: client_modified_date
-        description: "Last change to the customer record in the source system."
+        description: "Last change to the customer record in the source system, cast from text to a timestamp."
