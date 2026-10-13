@@ -2,41 +2,43 @@
 -- ONE row per store. 701 = Sales.Store. THIS ROW COUNT IS THE CONTRACT, enforced by
 -- tests/silver/slv_adventure_works_sales__store_row_count_matches_source.sql.
 --
--- Reseller stores that buy from AdventureWorks. store_key is minted HERE from
--- business_entity_id so gold never has to recompute it.
+-- Reseller stores that buy from AdventureWorks. No surrogate key is minted here --
+-- store_id (business_entity_id) is the natural key; gold mints its own store_key.
 --
--- demographics is the StoreSurvey XML, answered by every store (confirmed: 701/701
--- non-null). Shredded below into store_* columns so gold doesn't carry XML parsing.
+-- demographics is the StoreSurvey XML, pre-shredded upstream into demographics_*
+-- columns. Renamed below into store_* so gold doesn't carry the raw survey names.
 -- One row per store already, so no CTE or join is needed to pull it off.
 
 select
     -- keys ----------------------------------------------------------------
-    -- Same md5-of-varchar construction as adw_core's person_key, so a surrogate
-    -- key built the same way means the same thing anywhere in the mesh.
-    md5(cast(coalesce(cast(business_entity_id as varchar),
-                      '_dbt_utils_surrogate_key_null_') as varchar)) as store_key,
-    business_entity_id,
+    s.business_entity_id as store_id,
 
     -- identity --------------------------------------------------------------
     name as store_name,
-    sales_person_id,
 
     -- demographics: StoreSurvey XML, shredded -------------------------------
-    try_to_decimal(xmlget(parse_xml(demographics), 'AnnualSales'     ):"$"::varchar, 18, 2) as store_annual_sales,
-    try_to_decimal(xmlget(parse_xml(demographics), 'AnnualRevenue'   ):"$"::varchar, 18, 2) as store_annual_revenue,
-    xmlget(parse_xml(demographics), 'BankName'        ):"$"::varchar as store_bank_name,
-    xmlget(parse_xml(demographics), 'BusinessType'    ):"$"::varchar as store_business_type,
-    try_to_number(xmlget(parse_xml(demographics), 'YearOpened'      ):"$"::varchar) as store_year_opened,
-    xmlget(parse_xml(demographics), 'Specialty'       ):"$"::varchar as store_specialty,
-    try_to_number(xmlget(parse_xml(demographics), 'SquareFeet'      ):"$"::varchar) as store_square_feet,
+    demographics_annual_sales as store_annual_sales,
+    demographics_annual_revenue as store_annual_revenue,
+    demographics_bank_name as store_bank_name,
+    demographics_business_type as store_business_type,
+    demographics_year_opened as store_year_opened,
+    demographics_specialty as store_specialty,
+    demographics_square_feet as store_square_feet,
 
     -- NOT numeric: the source carries "4+" alongside "2" and "3". Never cast.
-    xmlget(parse_xml(demographics), 'Brands'          ):"$"::varchar as store_brand_count,
+    demographics_brand_count as store_brand_count,
 
-    xmlget(parse_xml(demographics), 'Internet'        ):"$"::varchar as store_internet_connection_type,
-    try_to_number(xmlget(parse_xml(demographics), 'NumberEmployees' ):"$"::varchar) as store_number_employees,
+    demographics_internet_connection_type as store_internet_connection_type,
+    demographics_number_employees as store_number_employees,
+
+    -- assigned salesperson --------------------------------------------------
+    s.sales_person_id,
+    p.person_key                            as sales_person_key,
+    p.person_full_name                      as sales_person_full_name,
 
     -- audit -------------------------------------------------------------
     try_to_timestamp(modified_date) as store_modified_date
 
-from {{ ref('adw_core', 'brz_adventure_works_sales__store') }}
+from {{ ref('adw_core', 'brz_adventure_works_sales__store') }} as s
+left join {{ ref('adw_core', 'slv_person') }} as p
+    on s.sales_person_id = p.business_entity_id

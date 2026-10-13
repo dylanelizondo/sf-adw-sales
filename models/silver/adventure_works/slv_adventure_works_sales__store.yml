@@ -4,17 +4,14 @@ models:
   - name: slv_adventure_works_sales__store
     description: >
         Reseller stores that buy from AdventureWorks, with the salesperson who serves each
-        one. One row per store (701, equal to SALES.STORE). Mints store_key from
-        business_entity_id and shreds the StoreSurvey demographics XML (answered by every
-        store) into typed store_* columns so gold doesn't carry XML parsing.
+        one. One row per store (701, equal to SALES.STORE). store_id is the natural key
+        (business_entity_id); no surrogate key is minted here, gold mints its own. Shreds
+        the StoreSurvey demographics XML (answered by every store, pre-shredded upstream)
+        into typed store_* columns so gold doesn't carry the raw survey names.
 
     config:
-      # PRIMARY KEY over store_key, applied as DDL after the table is built. Same reasoning
-      # as adw_core's slv_person: a `constraints:` block is only emitted when the model
-      # declares `contract: enforced: true`, so without one the key never reaches Snowflake.
-      # Safe to re-run only because this is a table -- every run issues CREATE OR REPLACE.
       post_hook:
-        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_adventure_works_sales__store PRIMARY KEY (store_key)"
+        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_adventure_works_sales__store PRIMARY KEY (store_id)"
       meta:
         atlan:
           attributes:
@@ -29,19 +26,18 @@ models:
             # slv_adventure_works_sales__store
 
             Reseller stores that buy from AdventureWorks over ADVENTURE_WORKS.SALES.STORE, with the
-            salesperson who serves each one. One row per store (701). Mints store_key from
-            business_entity_id and shreds the StoreSurvey demographics XML (answered by every store)
-            into typed store_* columns so gold doesn't carry XML parsing.
+            salesperson who serves each one. One row per store (701). store_id (business_entity_id)
+            is the natural key -- no surrogate key is minted here, gold mints its own. Shreds the
+            StoreSurvey demographics XML (answered by every store) into typed store_* columns, and
+            resolves the assigned salesperson's identity from adw_core's slv_person.
 
             **Layer:** silver
             **Subject area:** Sales
 
             | Column | Description |
             | --- | --- |
-            | STORE_KEY | PK. Surrogate key, md5 of business_entity_id. |
-            | BUSINESS_ENTITY_ID | Natural key. PK of SALES.STORE and FK to PERSON.BUSINESS_ENTITY. |
+            | STORE_ID | PK. Natural key, business_entity_id of SALES.STORE and FK to PERSON.BUSINESS_ENTITY. |
             | STORE_NAME | Name of the reseller store. Not unique: 2 pairs of stores share a name. |
-            | SALES_PERSON_ID | FK to the salesperson who serves this store. |
             | STORE_ANNUAL_SALES | Self-reported annual sales in dollars. |
             | STORE_ANNUAL_REVENUE | Self-reported annual revenue in dollars. |
             | STORE_BANK_NAME | Self-reported bank used by the store. |
@@ -52,6 +48,9 @@ models:
             | STORE_BRAND_COUNT | Self-reported number of brands carried, as text (for example "2", "4+", "AW"). |
             | STORE_INTERNET_CONNECTION_TYPE | Self-reported internet connection type: ISDN, DSL, T1, T2, or T3. |
             | STORE_NUMBER_EMPLOYEES | Self-reported employee count. |
+            | SALES_PERSON_ID | FK to the salesperson who serves this store. |
+            | SALES_PERSON_KEY | person_key of the salesperson, from adw_core slv_person. |
+            | SALES_PERSON_FULL_NAME | Display name of the salesperson, from adw_core slv_person. |
             | STORE_MODIFIED_DATE | Last change to this store in the source system, cast from text. |
 
             _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
@@ -59,18 +58,10 @@ models:
     columns:
 
       # --- keys ------------------------------------------------------------
-      - name: store_key
+      - name: store_id
         description: >
-            PK. Surrogate key, md5 of business_entity_id, built the same way as adw_core's
-            person_key so the construction means the same thing anywhere in the mesh.
-        data_tests:
-          - unique
-          - not_null
-
-      - name: business_entity_id
-        description: >
-            Natural key. PK of SALES.STORE and FK to PERSON.BUSINESS_ENTITY, the universal
-            identifier shared across the AdventureWorks party model.
+            PK. Natural key, business_entity_id of SALES.STORE and FK to PERSON.BUSINESS_ENTITY,
+            the universal identifier shared across the AdventureWorks party model.
         data_tests:
           - unique
           - not_null
@@ -83,15 +74,6 @@ models:
       - name: store_name
         description: "Name of the reseller store. Not unique: 2 pairs of stores share a name."
         data_tests: [not_null]
-
-      - name: sales_person_id
-        description: "FK to the salesperson who serves this store."
-        data_tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('adw_core', 'brz_adventure_works_sales__sales_person')
-                field: business_entity_id
 
       # --- demographics: StoreSurvey XML, shredded ----------------------------
       # Every one of the 701 stores answered the survey (confirmed non-null), so unlike
@@ -155,6 +137,24 @@ models:
       - name: store_number_employees
         description: "Self-reported employee count."
         data_tests: [not_null]
+
+      # --- assigned salesperson ------------------------------------------------
+      - name: sales_person_id
+        description: "FK to the salesperson who serves this store."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_person')
+                field: business_entity_id
+
+      - name: sales_person_key
+        description: "person_key of the salesperson, from adw_core slv_person. Null if the salesperson is not found there."
+
+      - name: sales_person_full_name
+        description: "Display name of the salesperson, from adw_core slv_person. Contains PII."
+        config:
+          meta: { contains_pii: true }
 
       # --- audit ---------------------------------------------------------
       - name: store_modified_date
