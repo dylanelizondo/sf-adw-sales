@@ -3,7 +3,7 @@
 -- client row.
 select distinct
     o.customer_id
-from {{ ref('dim_orders') }} as o
-left join {{ ref('dim_client') }} as c
+from {{ ref('gld_dim_orders') }} as o
+left join {{ ref('gld_dim_client') }} as c
     on o.customer_id = c.customer_id
 where c.customer_id is null

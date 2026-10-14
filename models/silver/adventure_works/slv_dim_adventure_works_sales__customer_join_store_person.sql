@@ -40,7 +40,7 @@ select
     c.territory_id,
 
     -- audit -------------------------------------------------------------------
-    try_to_timestamp(c.modified_date)              as customer_modified_date
+    c.modified_date                                as customer_modified_date
 
 from {{ ref('adw_core', 'brz_adventure_works_sales__customer') }} as c
 left join {{ ref('adw_core', 'brz_adventure_works_sales__store') }} as s

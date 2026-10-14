@@ -23,6 +23,6 @@ select
     rowguid,
 
     -- audit ---------------------------------------------------------------
-    try_to_timestamp(modified_date) as sales_territory_history_modified_date
+    modified_date as sales_territory_history_modified_date
 
 from {{ ref('adw_core', 'brz_adventure_works_sales__sales_territory_history') }}

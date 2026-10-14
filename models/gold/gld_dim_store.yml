@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: dim_store
+  - name: gld_dim_store
     description: >
         Gold dimension of AdventureWorks reseller stores. One row per store (701, equal to
         slv_dim_adventure_works_sales__store_join_person), reflecting only the current state of each

@@ -4,5 +4,5 @@ select
     silver_orders.n as silver_rows,
     dim_order_rows.n as dim_rows
 from (select count(*) as n from {{ ref('slv_dim_adventure_works_sales__sales_order_header_join_detail') }}) as silver_orders
-cross join (select count(*) as n from {{ ref('dim_orders') }}) as dim_order_rows
+cross join (select count(*) as n from {{ ref('gld_dim_orders') }}) as dim_order_rows
 where silver_orders.n != dim_order_rows.n
