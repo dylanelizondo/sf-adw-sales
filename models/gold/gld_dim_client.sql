@@ -1,19 +1,25 @@
+{{ config(alias="adw_dim_client") }}
+
 -- dim_client
 -- ONE row per client (customer). Row count equals slv_adventure_works_sales__customer (19,820),
 -- enforced by tests/gold/dim_client__row_count_matches_silver.sql.
 --
--- Reads from SILVER, never from bronze: client_key is minted in silver and inherited here.
--- customer_id stays as the natural key, so the dimension joins straight to dim_orders.
+-- Reads from SILVER, never from bronze. customer_id is the natural key, so the dimension
+-- joins straight to dim_orders. client_key is an auto-incrementing surrogate key minted
+-- HERE, since silver carries no key of its own -- same approach as dim_store. row_number()
+-- is used instead of a Snowflake SEQUENCE because this table is rebuilt with CREATE OR
+-- REPLACE on every run -- a SEQUENCE would keep climbing across runs instead of restarting,
+-- so the key would not be reproducible.
 --
 -- Adds the display name and, for individual customers only, non-sensitive self-reported
--- attributes from adw_core's slv_person (one row per business_entity_id, so no fan-out).
+-- attributes from adw_core's slv_adventure_works_person__person (one row per business_entity_id, so no fan-out).
 -- Email, phone and the SENSITIVE survey answers (gender, marital status, income band) are not
 -- selected. The 635 customers with both a person and a store id are STORE clients and get no
 -- personal data. Store details live in dim_store: join on store_id.
 
 select
     -- keys ----------------------------------------------------------------
-    c.customer_key                              as client_key,
+    row_number() over (order by c.customer_id)  as client_key,
     c.customer_id,
 
     -- client ------------------------------------------------------------------
@@ -47,8 +53,8 @@ select
     c.customer_modified_date                    as client_modified_date
 
 from {{ ref('slv_adventure_works_sales__customer') }} as c
-left join {{ ref('slv_adventure_works_sales__store') }} as s
-    on c.store_id = s.business_entity_id
-left join {{ ref('adw_core', 'slv_person') }} as p
+left join {{ ref('slv_dim_adventure_works_sales__store_join_person') }} as s
+    on c.store_id = s.store_id
+left join {{ ref('adw_core', 'slv_adventure_works_person__person') }} as p
     on c.person_id = p.business_entity_id
    and c.customer_type = 'INDIVIDUAL'

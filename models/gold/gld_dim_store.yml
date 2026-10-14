@@ -4,9 +4,12 @@ models:
   - name: dim_store
     description: >
         Gold dimension of AdventureWorks reseller stores. One row per store (701, equal to
-        slv_adventure_works_sales__store). Inherits store_key and the shredded StoreSurvey
-        attributes from silver and adds the assigned salesperson's key and full name from
-        adw_core's slv_person, so BI joins a single dimension.
+        slv_dim_adventure_works_sales__store_join_person), reflecting only the current state of each
+        store. Reads from gld_dim_store_snapshot, a Type 2 history of silver keyed on
+        store_id that tracks every change to a store's attributes over time; query that
+        snapshot directly for history. The only thing added here is store_key, an
+        auto-incrementing surrogate key minted in gold since the snapshot carries no key
+        of its own.
 
     config:
       meta:
@@ -22,7 +25,7 @@ models:
           readme: |
             # dim_store
 
-            Gold dimension of AdventureWorks reseller stores. One row per store (701, equal to slv_adventure_works_sales__store). Inherits store_key and the shredded StoreSurvey attributes from silver and adds the assigned salesperson's key and full name from adw_core's slv_person, so BI joins a single dimension.
+            Gold dimension of AdventureWorks reseller stores. One row per store (701, equal to slv_dim_adventure_works_sales__store_join_person), reflecting only the current state of each store. Reads from gld_dim_store_snapshot, a Type 2 history of silver keyed on store_id that tracks every change to a store's attributes over time; query that snapshot directly for history. The only thing added here is store_key, an auto-incrementing surrogate key minted in gold.
 
             **Layer:** gold
             **Subject area:** Sales
@@ -43,8 +46,8 @@ models:
             | STORE_ANNUAL_SALES | Self-reported annual sales in dollars. |
             | STORE_ANNUAL_REVENUE | Self-reported annual revenue in dollars. |
             | SALES_PERSON_ID | FK to the salesperson who serves the store. |
-            | SALES_PERSON_KEY | person_key of the salesperson, from adw_core slv_person. |
-            | SALES_PERSON_FULL_NAME | Display name of the salesperson, from adw_core slv_person. |
+            | SALES_PERSON_KEY | person_key of the salesperson, from adw_core slv_adventure_works_person__person. |
+            | SALES_PERSON_FULL_NAME | Display name of the salesperson, from adw_core slv_adventure_works_person__person. |
             | STORE_MODIFIED_DATE | Last change to the store in the source system. |
 
             _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
@@ -105,10 +108,10 @@ models:
         data_tests: [not_null]
 
       - name: sales_person_key
-        description: "person_key of the salesperson, from adw_core slv_person. Null if the salesperson is not found there."
+        description: "person_key of the salesperson, resolved in silver from adw_core slv_adventure_works_person__person. Null if the salesperson is not found there."
 
       - name: sales_person_full_name
-        description: "Display name of the salesperson, from adw_core slv_person. Contains PII."
+        description: "Display name of the salesperson, resolved in silver from adw_core slv_adventure_works_person__person. Contains PII."
         config:
           meta: { contains_pii: true }
 
