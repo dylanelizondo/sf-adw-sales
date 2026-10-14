@@ -1,70 +1,31 @@
+{{
+    config(
+        materialized='incremental',
+        unique_key='sales_order_id',
+        incremental_strategy='merge',
+        alias='adw_dim_orders'
+    )
+}}
+
 -- dim_orders
--- ONE row per sales order. Row count equals slv_adventure_works_sales__sales_order_header,
--- enforced by tests/gold/dim_orders__row_count_matches_silver.sql.
+-- ONE row per sales order. Row count equals
+-- slv_dim_adventure_works_sales__sales_order_header_join_detail, enforced by
+-- tests/gold/dim_orders__row_count_matches_silver.sql.
 --
--- Reads from SILVER, never from bronze: the order key arrives corrupted in bronze and is
--- recovered once in silver (recover_sales_order_id). Re-deriving it here would risk keys
--- that no longer join to the order lines.
+-- Reads from slv_dim_adventure_works_sales__sales_order_header_join_detail, which already
+-- joins the order header (recovered straight from bronze) to its aggregated line metrics.
+-- Straight select -- gold adds nothing, not even a key: sales_order_id is the natural key
+-- and is used as-is.
 --
--- Carries the header attributes plus three order-level line metrics (line count, units,
--- revenue) so order KPIs need no join to the order lines. The aggregation sits in a
--- subquery with one row per order, so the left join cannot fan out the header.
+-- Type 1: merge keyed on sales_order_id, so a changed order overwrites its existing row
+-- in place -- no history is kept here. On incremental runs only orders modified since the
+-- last run are re-selected (watermarked on order_modified_date); see the dbt incremental-
+-- strategy docs: https://docs.getdbt.com/docs/build/incremental-strategy
 
-select
-    -- keys ----------------------------------------------------------------
-    h.sales_order_key                       as order_key,
-    h.sales_order_id,
+select s.*
 
-    -- identifiers -----------------------------------------------------------
-    h.sales_order_number,
-    h.purchase_order_number,
-    h.account_number,
-    h.revision_number,
+from {{ ref('slv_dim_adventure_works_sales__sales_order_header_join_detail') }} as s
 
-    -- dates -------------------------------------------------------------------
-    h.order_date,
-    h.due_date,
-    h.ship_date,
-    h.ship_date is not null                 as is_shipped,
-
-    -- status and channel (decoded in silver) ----------------------------------
-    h.status_code                           as order_status_code,
-    h.status_label                          as order_status_label,
-    h.is_online_order,
-    h.order_channel_label                   as order_channel,
-
-    -- foreign keys ------------------------------------------------------------
-    h.customer_id,
-    h.sales_person_id,
-    h.territory_id,
-    h.bill_to_address_id,
-    h.ship_to_address_id,
-    h.ship_method_id,
-    h.credit_card_id,
-    h.currency_rate_id,
-
-    -- amounts -----------------------------------------------------------------
-    h.sub_total,
-    h.tax_amt,
-    h.freight,
-    h.total_due,
-
-    -- order-level line metrics --------------------------------------------------
-    coalesce(l.order_line_count, 0)         as order_line_count,
-    coalesce(l.order_total_qty, 0)          as order_total_qty,
-    coalesce(l.order_total_revenue, 0)      as order_total_revenue,
-
-    -- audit -------------------------------------------------------------------
-    h.modified_date                         as order_modified_date
-
-from {{ ref('slv_adventure_works_sales__sales_order_header') }} as h
-left join (
-    select
-        sales_order_id,
-        count(*)        as order_line_count,
-        sum(order_qty)  as order_total_qty,
-        sum(line_total) as order_total_revenue
-    from {{ ref('slv_adventure_works_sales__sales_order_detail') }}
-    group by sales_order_id
-) as l
-    on h.sales_order_id = l.sales_order_id
+{% if is_incremental() %}
+where s.order_modified_date > (select coalesce(max(order_modified_date), '1900-01-01') from {{ this }})
+{% endif %}
