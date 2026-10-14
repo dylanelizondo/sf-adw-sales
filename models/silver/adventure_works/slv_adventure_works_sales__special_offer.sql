@@ -30,6 +30,6 @@ select
     max_qty as special_offer_max_qty,
 
     -- audit -------------------------------------------------------------
-    try_to_timestamp(modified_date) as special_offer_modified_date
+    modified_date as special_offer_modified_date
 
 from {{ ref('adw_core', 'brz_adventure_works_sales__special_offer') }}

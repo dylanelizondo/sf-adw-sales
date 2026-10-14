@@ -4,5 +4,5 @@
 select
     customer_id,
     client_type
-from {{ ref('dim_client') }}
+from {{ ref('gld_dim_client') }}
 where client_name = 'Unknown'

@@ -16,6 +16,6 @@ select
     reasontype    as reason_type,
 
     -- audit ---------------------------------------------------------------
-    try_to_timestamp(modifieddate) as sales_reason_modified_date
+    modifieddate as sales_reason_modified_date
 
 from {{ ref('adw_core', 'brz_adventure_works_sales__sales_reason') }}

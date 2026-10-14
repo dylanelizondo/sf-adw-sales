@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: dim_orders
+  - name: gld_dim_orders
     description: >
         Gold dimension of AdventureWorks sales orders. One row per order (equal to
         slv_dim_adventure_works_sales__sales_order_header_join_detail), reflecting only the
