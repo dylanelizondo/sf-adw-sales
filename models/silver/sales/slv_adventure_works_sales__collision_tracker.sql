@@ -12,8 +12,6 @@
 
 select
     -- keys ----------------------------------------------------------------
-    md5(cast(coalesce(cast(nullif(trim(incident_number::varchar), '') as varchar),
-                      '_dbt_utils_surrogate_key_null_') as varchar))      as collision_tracker_key,
     nullif(trim(incident_number::varchar), '')                          as incident_number,
 
     -- when ------------------------------------------------------------------

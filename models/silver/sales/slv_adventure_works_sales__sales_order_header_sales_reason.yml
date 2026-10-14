@@ -19,7 +19,7 @@ models:
         atlan:
           attributes:
             ownerUsers: ["mlara"]
-            ownerGroups: ["sales_adw"]
+            ownerGroups: ["sales_adventure_works"]
             certificateStatus: DRAFT
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
@@ -35,7 +35,6 @@ models:
 
             | Column | Description |
             | --- | --- |
-            | SALES_ORDER_SALES_REASON_KEY | Surrogate key, md5 of the (sales_order_id, sales_reason_id) pair, built the same way as dbt_utils.generate_surrogate_key. |
             | SALES_ORDER_ID | Part of the composite key. FK to the sales order header. Recovered from the corrupted source key with recover_sales_order_id. |
             | SALES_REASON_ID | Part of the composite key. FK to the sales reason lookup. |
             | MODIFIED_DATE | Date of the last change to the record in the source system, cast to DATE with to_silver_date. |
@@ -47,12 +46,6 @@ models:
     columns:
 
       # --- keys ------------------------------------------------------------
-      - name: sales_order_sales_reason_key
-        description: "Surrogate key, md5 of the (sales_order_id, sales_reason_id) pair, built the same way as dbt_utils.generate_surrogate_key."
-        data_tests:
-          - unique
-          - not_null
-
       - name: sales_order_id
         description: "Part of the composite key. FK to the sales order header. Recovered from the corrupted source key with recover_sales_order_id."
         data_tests:

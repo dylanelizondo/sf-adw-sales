@@ -13,7 +13,7 @@ models:
         atlan:
           attributes:
             ownerUsers: ["mlara"]
-            ownerGroups: ["sales_adw"]
+            ownerGroups: ["sales_adventure_works"]
             certificateStatus: DRAFT
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
@@ -29,7 +29,6 @@ models:
 
             | Column | Description |
             | --- | --- |
-            | INJURY_TRACKER_KEY | Surrogate key, md5 of report_number, built the same way as the other silver surrogate keys. |
             | REPORT_NUMBER | Natural key. Report number of the safety event, trimmed. |
             | CREATED_AT | Date and time the report was captured, as a TIMESTAMP_NTZ. |
             | DATE_OCCURRED | Date the event happened, as a DATE. |
@@ -51,12 +50,6 @@ models:
     columns:
 
       # --- keys ------------------------------------------------------------
-      - name: injury_tracker_key
-        description: "Surrogate key, md5 of report_number, built the same way as the other silver surrogate keys."
-        data_tests:
-          - unique
-          - not_null
-
       - name: report_number
         description: "Natural key. Report number of the safety event, trimmed."
         data_tests:
