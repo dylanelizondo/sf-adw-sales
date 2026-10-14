@@ -6,7 +6,7 @@
 -- customer_id stays as the natural key, so the dimension joins straight to dim_orders.
 --
 -- Adds the display name and, for individual customers only, non-sensitive self-reported
--- attributes from adw_core's slv_person (one row per business_entity_id, so no fan-out).
+-- attributes from adw_core's slv_adventure_works_person__person (one row per business_entity_id, so no fan-out).
 -- Email, phone and the SENSITIVE survey answers (gender, marital status, income band) are not
 -- selected. The 635 customers with both a person and a store id are STORE clients and get no
 -- personal data. Store details live in dim_store: join on store_id.
@@ -49,6 +49,6 @@ select
 from {{ ref('slv_adventure_works_sales__customer') }} as c
 left join {{ ref('slv_adventure_works_sales__store') }} as s
     on c.store_id = s.business_entity_id
-left join {{ ref('adw_core', 'slv_person') }} as p
+left join {{ ref('adw_core', 'slv_adventure_works_person__person') }} as p
     on c.person_id = p.business_entity_id
    and c.customer_type = 'INDIVIDUAL'

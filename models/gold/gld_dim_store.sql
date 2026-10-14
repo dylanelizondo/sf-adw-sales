@@ -2,15 +2,20 @@
 -- ONE row per reseller store. Row count equals slv_adventure_works_sales__store (701),
 -- enforced by tests/gold/dim_store__row_count_matches_silver.sql.
 --
--- Reads from SILVER: store_key is minted there and inherited here, and the StoreSurvey
--- XML is already shredded. The only thing added is the assigned salesperson's identity
--- from adw_core's slv_person, so BI joins one dimension instead of two.
--- slv_person has exactly one row per business_entity_id, so the join cannot fan out.
+-- Reads straight from SILVER: slv_store already shreds the StoreSurvey XML and resolves
+-- the assigned salesperson's identity from adw_core's slv_person, so gold adds nothing
+-- but the surrogate key.
+--
+-- store_key is an auto-incrementing row number, minted HERE because slv_store carries no
+-- surrogate key of its own (only the natural key, store_id). row_number() is used instead
+-- of a Snowflake SEQUENCE because this table is rebuilt with CREATE OR REPLACE on every
+-- run -- a SEQUENCE would keep climbing across runs instead of restarting, so the key
+-- would not be reproducible.
 
 select
     -- keys ----------------------------------------------------------------
-    s.store_key,
-    s.business_entity_id                    as store_id,
+    row_number() over (order by s.store_id) as store_key,
+    s.store_id,
 
     -- store ---------------------------------------------------------------
     s.store_name,
@@ -27,12 +32,10 @@ select
 
     -- assigned salesperson --------------------------------------------------
     s.sales_person_id,
-    p.person_key                            as sales_person_key,
-    p.person_full_name                      as sales_person_full_name,
+    s.sales_person_key,
+    s.sales_person_full_name,
 
     -- audit -----------------------------------------------------------------
     s.store_modified_date
 
 from {{ ref('slv_adventure_works_sales__store') }} as s
-left join {{ ref('adw_core', 'slv_person') }} as p
-    on s.sales_person_id = p.business_entity_id

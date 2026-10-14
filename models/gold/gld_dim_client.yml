@@ -7,7 +7,7 @@ models:
         slv_adventure_works_sales__customer). Inherits client_key from silver and adds the
         client's display name: the store name for reseller stores and the person's full name for
         individual customers. Individual clients also carry a few non-sensitive self-reported
-        attributes from adw_core's slv_person (age band, education, occupation, children, cars,
+        attributes from adw_core's slv_adventure_works_person__person (age band, education, occupation, children, cars,
         home ownership); stores never do. Email, phone and the sensitive survey answers (gender,
         marital status, income band) are deliberately left out. Join dim_orders on customer_id and
         dim_store on store_id; store details live in dim_store.
@@ -26,7 +26,7 @@ models:
           readme: |
             # dim_client
 
-            Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to slv_adventure_works_sales__customer). Inherits client_key from silver and adds the client's display name: the store name for reseller stores and the person's full name for individual customers. Individual clients also carry a few non-sensitive self-reported attributes from adw_core's slv_person (age band, education, occupation, children, cars, home ownership); stores never do. Email, phone and the sensitive survey answers (gender, marital status, income band) are deliberately left out. Join dim_orders on customer_id and dim_store on store_id; store details live in dim_store.
+            Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to slv_adventure_works_sales__customer). Inherits client_key from silver and adds the client's display name: the store name for reseller stores and the person's full name for individual customers. Individual clients also carry a few non-sensitive self-reported attributes from adw_core's slv_adventure_works_person__person (age band, education, occupation, children, cars, home ownership); stores never do. Email, phone and the sensitive survey answers (gender, marital status, income band) are deliberately left out. Join dim_orders on customer_id and dim_store on store_id; store details live in dim_store.
 
             **Layer:** gold
             **Subject area:** Sales
@@ -47,9 +47,9 @@ models:
             | CLIENT_NUMBER_CARS_OWNED | Number of cars owned. Self-reported. |
             | CLIENT_IS_HOME_OWNER | Home ownership. Self-reported. |
             | STORE_ID | FK to dim_store (business_entity_id). Set when the client is a reseller store, null for individuals. |
-            | PERSON_ID | FK to the person behind an individual customer (business_entity_id in adw_core's slv_person). Null for store-only customers. |
+            | PERSON_ID | FK to the person behind an individual customer (business_entity_id in adw_core's slv_adventure_works_person__person). Null for store-only customers. |
             | TERRITORY_ID | FK to the sales territory the client belongs to. Will join to dim_territory once #26 is built. |
-            | PRIMARY_ADDRESS_ID | FK to the client's winning address, taken from slv_person. Will join to dim_address once #27 is built. Individual clients only; null for stores and for people with no address. |
+            | PRIMARY_ADDRESS_ID | FK to the client's winning address, taken from slv_adventure_works_person__person. Will join to dim_address once #27 is built. Individual clients only; null for stores and for people with no address. |
             | CLIENT_MODIFIED_DATE | Last change to the customer record in the source system. |
 
             _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
@@ -119,11 +119,11 @@ models:
                 field: business_entity_id
 
       - name: person_id
-        description: "FK to the person behind an individual customer (business_entity_id in adw_core's slv_person). Null for store-only customers."
+        description: "FK to the person behind an individual customer (business_entity_id in adw_core's slv_adventure_works_person__person). Null for store-only customers."
         data_tests:
           - relationships:
               arguments:
-                to: ref('adw_core', 'slv_person')
+                to: ref('adw_core', 'slv_adventure_works_person__person')
                 field: business_entity_id
 
       - name: territory_id
@@ -135,7 +135,7 @@ models:
                 field: territory_id
 
       - name: primary_address_id
-        description: "FK to the client's winning address, taken from slv_person. Will join to dim_address once #27 is built. Individual clients only; null for stores and for people with no address."
+        description: "FK to the client's winning address, taken from slv_adventure_works_person__person. Will join to dim_address once #27 is built. Individual clients only; null for stores and for people with no address."
 
       # --- audit -------------------------------------------------------------
       - name: client_modified_date

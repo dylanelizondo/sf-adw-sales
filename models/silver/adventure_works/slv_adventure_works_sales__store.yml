@@ -29,9 +29,10 @@ models:
             # slv_adventure_works_sales__store
 
             Reseller stores that buy from AdventureWorks over ADVENTURE_WORKS.SALES.STORE, with the
-            salesperson who serves each one. One row per store (701). Mints store_key from
-            business_entity_id and shreds the StoreSurvey demographics XML (answered by every store)
-            into typed store_* columns so gold doesn't carry XML parsing.
+            salesperson who serves each one. One row per store (701). store_id (business_entity_id)
+            is the natural key -- no surrogate key is minted here, gold mints its own. Shreds the
+            StoreSurvey demographics XML (answered by every store) into typed store_* columns, and
+            resolves the assigned salesperson's identity from adw_core's slv_adventure_works_person__person.
 
             **Layer:** silver
             **Subject area:** Sales
@@ -52,6 +53,9 @@ models:
             | STORE_BRAND_COUNT | Self-reported number of brands carried, as text (for example "2", "4+", "AW"). |
             | STORE_INTERNET_CONNECTION_TYPE | Self-reported internet connection type: ISDN, DSL, T1, T2, or T3. |
             | STORE_NUMBER_EMPLOYEES | Self-reported employee count. |
+            | SALES_PERSON_ID | FK to the salesperson who serves this store. |
+            | SALES_PERSON_KEY | person_key of the salesperson, from adw_core slv_adventure_works_person__person. |
+            | SALES_PERSON_FULL_NAME | Display name of the salesperson, from adw_core slv_adventure_works_person__person. |
             | STORE_MODIFIED_DATE | Last change to this store in the source system, cast from text. |
 
             _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
@@ -155,6 +159,24 @@ models:
       - name: store_number_employees
         description: "Self-reported employee count."
         data_tests: [not_null]
+
+      # --- assigned salesperson ------------------------------------------------
+      - name: sales_person_id
+        description: "FK to the salesperson who serves this store."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_person')
+                field: business_entity_id
+
+      - name: sales_person_key
+        description: "person_key of the salesperson, from adw_core slv_adventure_works_person__person. Null if the salesperson is not found there."
+
+      - name: sales_person_full_name
+        description: "Display name of the salesperson, from adw_core slv_adventure_works_person__person. Contains PII."
+        config:
+          meta: { contains_pii: true }
 
       # --- audit ---------------------------------------------------------
       - name: store_modified_date

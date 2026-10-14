@@ -65,7 +65,7 @@ models:
       # --- foreign keys --------------------------------------------------
       - name: person_id
         description: >
-            FK to adw_core slv_person (business_entity_id). Identifies the individual retail buyer.
+            FK to adw_core slv_adventure_works_person__person (business_entity_id). Identifies the individual retail buyer.
             Null when the customer is a store (customer_type = STORE).
         data_tests:
           - relationships:
