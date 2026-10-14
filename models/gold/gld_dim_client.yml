@@ -116,7 +116,7 @@ models:
           - relationships:
               arguments:
                 to: ref('slv_dim_adventure_works_sales__store_join_person')
-                field: business_entity_id
+                field: store_id
 
       - name: person_id
         description: "FK to the person behind an individual customer (business_entity_id in adw_core's slv_adventure_works_person__person). Null for store-only customers."

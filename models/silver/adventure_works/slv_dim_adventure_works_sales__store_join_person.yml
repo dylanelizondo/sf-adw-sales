@@ -4,9 +4,10 @@ models:
   - name: slv_dim_adventure_works_sales__store_join_person
     description: >
         Reseller stores that buy from AdventureWorks, with the salesperson who serves each
-        one. One row per store (701, equal to SALES.STORE). Mints store_key from
-        business_entity_id and shreds the StoreSurvey demographics XML (answered by every
-        store) into typed store_* columns so gold doesn't carry XML parsing.
+        one. One row per store (701, equal to SALES.STORE). store_id (business_entity_id) is
+        the natural key -- no surrogate key is minted here, gold mints its own store_key.
+        Shreds the StoreSurvey demographics XML (answered by every store) into typed
+        store_* columns so gold doesn't carry XML parsing.
 
     config:
       meta:
@@ -33,8 +34,7 @@ models:
 
             | Column | Description |
             | --- | --- |
-            | STORE_KEY | PK. Surrogate key, md5 of business_entity_id. |
-            | BUSINESS_ENTITY_ID | Natural key. PK of SALES.STORE and FK to PERSON.BUSINESS_ENTITY. |
+            | STORE_ID | PK. Natural key. PK of SALES.STORE and FK to PERSON.BUSINESS_ENTITY. No surrogate key is minted here -- gold mints its own STORE_KEY. |
             | STORE_NAME | Name of the reseller store. Not unique: 2 pairs of stores share a name. |
             | SALES_PERSON_ID | FK to the salesperson who serves this store. |
             | STORE_ANNUAL_SALES | Self-reported annual sales in dollars. |
@@ -57,18 +57,11 @@ models:
     columns:
 
       # --- keys ------------------------------------------------------------
-      - name: store_key
-        description: >
-            PK. Surrogate key, md5 of business_entity_id, built the same way as adw_core's
-            person_key so the construction means the same thing anywhere in the mesh.
-        data_tests:
-          - unique
-          - not_null
-
-      - name: business_entity_id
+      - name: store_id
         description: >
             Natural key. PK of SALES.STORE and FK to PERSON.BUSINESS_ENTITY, the universal
-            identifier shared across the AdventureWorks party model.
+            identifier shared across the AdventureWorks party model. No surrogate key is
+            minted here -- gold mints its own store_key.
         data_tests:
           - unique
           - not_null
