@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: slv_adventure_works_sales__sales_territory_history
+  - name: slv_dim_adventure_works_sales__sales_territory_history
     description: >
         Silver table over ADVENTURE_WORKS.SALES.SALES_TERRITORY_HISTORY. One row per
         salesperson + territory + start_date (composite key). Full assignment history
@@ -22,7 +22,7 @@ models:
           termNames:
             - "Sales"
           readme: |
-            # slv_adventure_works_sales__sales_territory_history
+            # slv_dim_adventure_works_sales__sales_territory_history
 
             Silver table over ADVENTURE_WORKS.SALES.SALES_TERRITORY_HISTORY. One row per
             salesperson + territory + start_date. Full assignment history of salespeople

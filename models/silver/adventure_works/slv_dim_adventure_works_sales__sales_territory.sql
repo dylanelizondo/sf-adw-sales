@@ -1,3 +1,8 @@
+-- slv_dim_adventure_works_sales__sales_territory
+-- ONE row per sales territory (10). No JOIN is needed, so the name carries no join_<table> suffix.
+-- territory_id is the natural key; no surrogate key is minted here.
+{{ config(alias='dim_sales_territory') }}
+
 select
     territory_id,
     name,

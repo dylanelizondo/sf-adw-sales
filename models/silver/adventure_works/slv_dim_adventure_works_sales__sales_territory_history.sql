@@ -1,10 +1,11 @@
--- slv_sales_territory_history
+-- slv_dim_adventure_works_sales__sales_territory_history
 -- ONE row per salesperson + territory + start_date. Grain matches the source composite PK.
 --
 -- Open SCD2: 13 of the 17 rows have NULL end_date (current assignment).
 -- is_current_assignment flags the open rows without filtering them out, so
 -- consumers can retrieve the full history or the snapshot at any point in time.
 -- No rows are closed or synthesised here — that belongs in gold snapshots.
+{{ config(alias='dim_sales_territory_history') }}
 
 select
     -- grain keys ----------------------------------------------------------

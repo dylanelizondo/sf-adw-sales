@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: gld_dim_territory
+    description: >
+        Gold dimension of AdventureWorks sales territories. SCD Type 1 (dbt incremental, merge
+        on territory_id): one row per territory (10), attributes overwritten in place. Reads
+        slv_dim_adventure_works_sales__sales_territory with no JOINs. The natural territory_id
+        is the key. The *_YTD / *_LAST_YEAR snapshot columns are excluded on purpose. Built as
+        DIM_TERRITORY in Snowflake. Issue #26.
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: territory_id
+        description: "PK. Natural key, territory_id of SALES.SALES_TERRITORY."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- territory ---------------------------------------------------------
+      - name: territory_name
+        description: "Name of the sales territory."
+        data_tests: [not_null]
+
+      - name: country_region_code
+        description: "ISO country/region code for the territory."
+        data_tests: [not_null]
+
+      - name: territory_group
+        description: "Geographic group this territory belongs to (Europe, North America, Pacific)."
+
+      # --- audit ---------------------------------------------------------------
+      - name: territory_modified_date
+        description: "Last change to the territory in the source system."
