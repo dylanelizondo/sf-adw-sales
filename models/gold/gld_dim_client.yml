@@ -4,7 +4,8 @@ models:
   - name: dim_client
     description: >
         Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to
-        slv_adventure_works_sales__customer). Inherits client_key from silver and adds the
+        slv_adventure_works_sales__customer). client_key is an auto-incrementing surrogate
+        key minted HERE, since silver carries no key of its own. Adds the
         client's display name: the store name for reseller stores and the person's full name for
         individual customers. Individual clients also carry a few non-sensitive self-reported
         attributes from adw_core's slv_adventure_works_person__person (age band, education, occupation, children, cars,
@@ -26,14 +27,14 @@ models:
           readme: |
             # dim_client
 
-            Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to slv_adventure_works_sales__customer). Inherits client_key from silver and adds the client's display name: the store name for reseller stores and the person's full name for individual customers. Individual clients also carry a few non-sensitive self-reported attributes from adw_core's slv_adventure_works_person__person (age band, education, occupation, children, cars, home ownership); stores never do. Email, phone and the sensitive survey answers (gender, marital status, income band) are deliberately left out. Join dim_orders on customer_id and dim_store on store_id; store details live in dim_store.
+            Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to slv_adventure_works_sales__customer). client_key is an auto-incrementing surrogate key minted here, since silver carries no key of its own. Adds the client's display name: the store name for reseller stores and the person's full name for individual customers. Individual clients also carry a few non-sensitive self-reported attributes from adw_core's slv_adventure_works_person__person (age band, education, occupation, children, cars, home ownership); stores never do. Email, phone and the sensitive survey answers (gender, marital status, income band) are deliberately left out. Join dim_orders on customer_id and dim_store on store_id; store details live in dim_store.
 
             **Layer:** gold
             **Subject area:** Sales
 
             | Column | Description |
             | --- | --- |
-            | CLIENT_KEY | PK. Surrogate key minted in silver (md5 of the customer id) and inherited here, never recomputed. |
+            | CLIENT_KEY | PK. Auto-incrementing surrogate key minted here (silver carries no key of its own). |
             | CUSTOMER_ID | Natural key. Unique identifier of the customer in the source system; the column dim_orders joins on. |
             | CLIENT_TYPE | Client classification from silver. INDIVIDUAL when only a person is set, STORE when a store is set (a store wins over a person for the 635 ambiguous rows), UNKNOWN when neither is set. |
             | CLIENT_NAME | Display name: the store name for STORE clients, the person's full name for INDIVIDUAL clients, 'Unknown' when neither is available (the dim_client__every_client_has_a_name test fails if that happens). Contains personal names for individuals. |
@@ -58,7 +59,7 @@ models:
 
       # --- keys ------------------------------------------------------------
       - name: client_key
-        description: "PK. Surrogate key minted in silver (md5 of the customer id) and inherited here, never recomputed."
+        description: "PK. Auto-incrementing surrogate key minted here (silver carries no key of its own)."
         data_tests:
           - unique
           - not_null

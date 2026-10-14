@@ -14,7 +14,7 @@
 -- instead of a Snowflake SEQUENCE because this table is rebuilt with CREATE OR REPLACE on
 -- every run -- a SEQUENCE would keep climbing across runs instead of restarting, so the
 -- key would not be reproducible.
-
+{{ config(alias='adw_dim_store' ) }}
 select
     -- keys ----------------------------------------------------------------
     row_number() over (order by s.store_id) as store_key,
