@@ -12,7 +12,7 @@
 
 select
     -- keys ----------------------------------------------------------------
-    h.sales_order_key                       as order_key,
+    h.sales_order_id                        as order_key,
     h.sales_order_id,
 
     -- identifiers -----------------------------------------------------------

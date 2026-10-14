@@ -13,7 +13,7 @@ models:
         atlan:
           attributes:
             ownerUsers: ["mlara"]
-            ownerGroups: ["sales_adw"]
+            ownerGroups: ["sales_adventure_works"]
             certificateStatus: DRAFT
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
@@ -29,7 +29,6 @@ models:
 
             | Column | Description |
             | --- | --- |
-            | COLLISION_TRACKER_KEY | Surrogate key, md5 of incident_number, built the same way as the other silver surrogate keys. |
             | INCIDENT_NUMBER | Natural key. Collision incident number, trimmed. |
             | INCIDENT_DATE | Date the collision happened, as a DATE. |
             | DAY_OF_WEEK | Day of the week the collision happened. |
@@ -57,12 +56,6 @@ models:
     columns:
 
       # --- keys ------------------------------------------------------------
-      - name: collision_tracker_key
-        description: "Surrogate key, md5 of incident_number, built the same way as the other silver surrogate keys."
-        data_tests:
-          - unique
-          - not_null
-
       - name: incident_number
         description: "Natural key. Collision incident number, trimmed."
         data_tests:

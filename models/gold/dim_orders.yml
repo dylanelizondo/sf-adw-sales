@@ -31,7 +31,7 @@ models:
 
             | Column | Description |
             | --- | --- |
-            | ORDER_KEY | PK. Surrogate key minted in silver from the recovered order id. |
+            | ORDER_KEY | PK. The recovered sales order id, used as the natural key (same value as sales_order_id). Silver no longer mints a surrogate key. |
             | SALES_ORDER_ID | Natural key. Order id recovered in silver. |
             | SALES_ORDER_NUMBER | Order number shown to the customer. |
             | PURCHASE_ORDER_NUMBER | Purchase order number the customer assigned. |
@@ -68,7 +68,7 @@ models:
 
       # --- keys ------------------------------------------------------------
       - name: order_key
-        description: "PK. Surrogate key minted in silver (md5 of the recovered order id) and inherited here, never recomputed."
+        description: "PK. The recovered sales order id, used as the natural key (same value as sales_order_id). Silver no longer mints a surrogate key."
         data_tests:
           - unique
           - not_null

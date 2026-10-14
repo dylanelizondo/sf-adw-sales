@@ -12,8 +12,6 @@
 
 select
     -- keys ----------------------------------------------------------------
-    md5(cast(coalesce(cast(try_to_number(trim(sales_order_detail_id::varchar)) as varchar),
-                      '_dbt_utils_surrogate_key_null_') as varchar))     as sales_order_detail_key,
     try_to_number(trim(sales_order_detail_id::varchar))::number(38,0)    as sales_order_detail_id,
     {{ recover_sales_order_id('sales_order_id') }}                       as sales_order_id,
 

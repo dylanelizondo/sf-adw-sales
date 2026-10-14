@@ -14,7 +14,7 @@ models:
         atlan:
           attributes:
             ownerUsers: ["mlara"]
-            ownerGroups: ["sales_adw"]
+            ownerGroups: ["sales_adventure_works"]
             certificateStatus: DRAFT
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
@@ -30,7 +30,6 @@ models:
 
             | Column | Description |
             | --- | --- |
-            | SALES_ORDER_DETAIL_KEY | Surrogate key, md5 of sales_order_detail_id, built the same way as the other silver surrogate keys. |
             | SALES_ORDER_DETAIL_ID | Natural key. Unique identifier of the order line. |
             | SALES_ORDER_ID | FK to the sales order header. Recovered from the corrupted source key with recover_sales_order_id. |
             | PRODUCT_ID | FK to the product sold on this line. |
@@ -50,12 +49,6 @@ models:
     columns:
 
       # --- keys ------------------------------------------------------------
-      - name: sales_order_detail_key
-        description: "Surrogate key, md5 of sales_order_detail_id, built the same way as the other silver surrogate keys."
-        data_tests:
-          - unique
-          - not_null
-
       - name: sales_order_detail_id
         description: "Natural key. Unique identifier of the order line."
         data_tests:
