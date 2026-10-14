@@ -6,6 +6,7 @@
 --
 -- sales_order_id is the key, recovered via recover_sales_order_id.
 -- is minted here -- the recovered natural key is unique and reproducible on its own.
+{{ config(alias="adw_sales_sales_order_header_join_detail") }}
 
 select
     -- keys ----------------------------------------------------------------
