@@ -3,7 +3,7 @@
         materialized='incremental',
         unique_key='sales_order_id',
         incremental_strategy='merge',
-        alias='dim_orders'
+        alias='adw_dim_orders'
     )
 }}
 
