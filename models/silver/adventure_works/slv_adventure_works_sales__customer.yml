@@ -10,8 +10,6 @@ models:
         surfaced as-is from the source system.
 
     config:
-      post_hook:
-        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_customer PRIMARY KEY (customer_key)"
       meta:
         atlan:
           attributes:
@@ -75,7 +73,7 @@ models:
 
       - name: store_id
         description: >
-            FK to slv_adventure_works_sales__store (business_entity_id). Identifies the reseller store.
+            FK to slv_dim_adventure_works_sales__store_join_person (business_entity_id). Identifies the reseller store.
             Null when the customer is an individual (customer_type = INDIVIDUAL).
         data_tests:
           - relationships:

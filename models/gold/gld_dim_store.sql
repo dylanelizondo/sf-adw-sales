@@ -1,41 +1,24 @@
 -- dim_store
--- ONE row per reseller store. Row count equals slv_adventure_works_sales__store (701),
+-- ONE row per reseller store. Row count equals slv_dim_adventure_works_sales__store_join_person (701),
 -- enforced by tests/gold/dim_store__row_count_matches_silver.sql.
 --
--- Reads straight from SILVER: slv_store already shreds the StoreSurvey XML and resolves
--- the assigned salesperson's identity from adw_core's slv_person, so gold adds nothing
--- but the surrogate key.
+-- Reads from gld_dim_store_snapshot, a Type 2 history of silver keyed on store_id, and
+-- keeps only the current row per store (dbt_valid_to is null) so this stays a one-row-
+-- per-store current-state dimension. Query the snapshot directly for history.
 --
--- store_key is an auto-incrementing row number, minted HERE because slv_store carries no
--- surrogate key of its own (only the natural key, store_id). row_number() is used instead
--- of a Snowflake SEQUENCE because this table is rebuilt with CREATE OR REPLACE on every
--- run -- a SEQUENCE would keep climbing across runs instead of restarting, so the key
--- would not be reproducible.
+-- The snapshot's own audit columns (dbt_scd_id, dbt_updated_at, dbt_valid_from,
+-- dbt_valid_to) are excluded so they don't leak into the dimension's column list.
+--
+-- store_key is an auto-incrementing row number, minted HERE because the snapshot carries
+-- no surrogate key of its own (only the natural key, store_id). row_number() is used
+-- instead of a Snowflake SEQUENCE because this table is rebuilt with CREATE OR REPLACE on
+-- every run -- a SEQUENCE would keep climbing across runs instead of restarting, so the
+-- key would not be reproducible.
 
 select
     -- keys ----------------------------------------------------------------
     row_number() over (order by s.store_id) as store_key,
-    s.store_id,
+    s.* exclude (dbt_scd_id, dbt_updated_at, dbt_valid_from, dbt_valid_to)
 
-    -- store ---------------------------------------------------------------
-    s.store_name,
-    s.store_business_type,
-    s.store_specialty,
-    s.store_year_opened,
-    s.store_square_feet,
-    s.store_number_employees,
-    s.store_brand_count,
-    s.store_internet_connection_type,
-    s.store_bank_name,
-    s.store_annual_sales,
-    s.store_annual_revenue,
-
-    -- assigned salesperson --------------------------------------------------
-    s.sales_person_id,
-    s.sales_person_key,
-    s.sales_person_full_name,
-
-    -- audit -----------------------------------------------------------------
-    s.store_modified_date
-
-from {{ ref('slv_adventure_works_sales__store') }} as s
+from {{ ref('gld_dim_store_snapshot') }} as s
+where s.dbt_valid_to is null

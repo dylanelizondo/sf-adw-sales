@@ -4,10 +4,12 @@ models:
   - name: dim_store
     description: >
         Gold dimension of AdventureWorks reseller stores. One row per store (701, equal to
-        slv_adventure_works_sales__store). Reads straight from silver, which already shreds
-        the StoreSurvey attributes and resolves the assigned salesperson's key and full name
-        from adw_core's slv_adventure_works_person__person. The only thing added here is store_key, an auto-incrementing
-        surrogate key minted in gold since silver carries no key of its own.
+        slv_dim_adventure_works_sales__store_join_person), reflecting only the current state of each
+        store. Reads from gld_dim_store_snapshot, a Type 2 history of silver keyed on
+        store_id that tracks every change to a store's attributes over time; query that
+        snapshot directly for history. The only thing added here is store_key, an
+        auto-incrementing surrogate key minted in gold since the snapshot carries no key
+        of its own.
 
     config:
       meta:
@@ -23,7 +25,7 @@ models:
           readme: |
             # dim_store
 
-            Gold dimension of AdventureWorks reseller stores. One row per store (701, equal to slv_adventure_works_sales__store). Reads straight from silver, which already shreds the StoreSurvey attributes and resolves the assigned salesperson's key and full name from adw_core's slv_adventure_works_person__person. The only thing added here is store_key, an auto-incrementing surrogate key minted in gold.
+            Gold dimension of AdventureWorks reseller stores. One row per store (701, equal to slv_dim_adventure_works_sales__store_join_person), reflecting only the current state of each store. Reads from gld_dim_store_snapshot, a Type 2 history of silver keyed on store_id that tracks every change to a store's attributes over time; query that snapshot directly for history. The only thing added here is store_key, an auto-incrementing surrogate key minted in gold.
 
             **Layer:** gold
             **Subject area:** Sales

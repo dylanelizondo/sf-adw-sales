@@ -115,7 +115,7 @@ models:
         data_tests:
           - relationships:
               arguments:
-                to: ref('slv_adventure_works_sales__store')
+                to: ref('slv_dim_adventure_works_sales__store_join_person')
                 field: business_entity_id
 
       - name: person_id

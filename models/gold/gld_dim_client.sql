@@ -47,7 +47,7 @@ select
     c.customer_modified_date                    as client_modified_date
 
 from {{ ref('slv_adventure_works_sales__customer') }} as c
-left join {{ ref('slv_adventure_works_sales__store') }} as s
+left join {{ ref('slv_dim_adventure_works_sales__store_join_person') }} as s
     on c.store_id = s.business_entity_id
 left join {{ ref('adw_core', 'slv_adventure_works_person__person') }} as p
     on c.person_id = p.business_entity_id
