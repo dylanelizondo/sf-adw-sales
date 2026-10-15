@@ -23,6 +23,7 @@
 -- strategy docs: https://docs.getdbt.com/docs/build/incremental-strategy
 
 select 
+    {{ dbt_utils.generate_surrogate_key(['sales_order_id']) }} as store_key,
     s.sales_order_id,
 
     -- identifiers -----------------------------------------------------------
