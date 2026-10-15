@@ -13,7 +13,7 @@ models:
         atlan:
           attributes:
             ownerUsers: ["mlara"]
-            ownerGroups: ["sales_adw"]
+            ownerGroups: ["sales_adventure_works"]
             certificateStatus: DRAFT
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
