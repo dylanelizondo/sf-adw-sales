@@ -8,7 +8,7 @@
 -- demographics is the StoreSurvey XML, pre-shredded upstream into demographics_*
 -- columns. Renamed below into store_* so gold doesn't carry the raw survey names.
 -- One row per store already, so no CTE or join is needed to pull it off.
-{{config(alias="adw_sales_store_join_person")}}
+{{config(alias="stg_dim_store_join_person")}}
 
 select
     -- keys ----------------------------------------------------------------
