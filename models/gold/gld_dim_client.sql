@@ -1,4 +1,11 @@
-{{ config(alias="dim_client") }}
+{{ config(
+    alias="dim_client",
+    materialized='incremental',
+    unique_key='customer_id',
+    incremental_strategy='merge',
+    post_hook="{{ upsert_default_rows('customer_id') }}"
+    )
+}}
 
 select
     -- keys ----------------------------------------------------------------

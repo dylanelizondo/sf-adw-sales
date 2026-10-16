@@ -79,3 +79,12 @@ models:
       +materialized: view
       +tags: ["gold"]
       +group: sales_adventure_works
+
+vars:
+  default_rows:
+    by_type:
+      text:      ['Missing', 'Not Applicable']
+      number:    [-1, -2]
+      date:      ['1900-01-01', '1900-01-01']
+      timestamp: ['1900-01-01 00:00:00', '1900-01-01 00:00:00']
+      boolean:   [false, false]
