@@ -5,7 +5,7 @@
 -- is_current_assignment flags the open rows without filtering them out, so
 -- consumers can retrieve the full history or the snapshot at any point in time.
 -- No rows are closed or synthesised here — that belongs in gold snapshots.
-{{ config(alias='dim_sales_territory_history') }}
+{{ config(alias='stg_dim_sales_territory_history') }}
 
 select
     -- grain keys ----------------------------------------------------------

@@ -2,13 +2,16 @@
     alias="dim_territory",
     materialized='incremental',
     unique_key='territory_id',
-    incremental_strategy='merge'
+    incremental_strategy='merge',
+    post_hook="{{ upsert_default_rows('territory_id') }}"
     )
 }}
 
 -- dim_territory
--- ONE row per sales territory (10). Row count equals slv_dim_adventure_works_sales__sales_territory,
--- enforced by tests/gold/gld_dim_territory__row_count_matches_silver.sql.
+-- ONE row per sales territory (10) plus the two default rows (-1 Missing, -2 Not Applicable)
+-- that upsert_default_rows adds in the post_hook. Row count equals
+-- slv_dim_adventure_works_sales__sales_territory + 2, enforced by
+-- tests/gold/gld_dim_territory__row_count_matches_silver.sql.
 --
 -- Type 1: merge keyed on territory_id, so a changed territory overwrites its row in place
 -- and no history is kept. Straight select from ONE silver model, no JOINs.
