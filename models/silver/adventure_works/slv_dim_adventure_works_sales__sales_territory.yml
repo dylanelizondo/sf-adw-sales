@@ -10,7 +10,7 @@ models:
           - unique
           - not_null
 
-      - name: name
+      - name: territory_name
         description: "Name of the sales territory."
         tests:
           - not_null
@@ -47,7 +47,7 @@ models:
         tests:
           - not_null
 
-      - name: modified_date
+      - name: territory_modified_date
         description: "Last modification date of the original record, cast to DATE type."
 
       - name: _loaded_at
