@@ -17,3 +17,104 @@ snapshots:
       check_cols: all
       updated_at: store_modified_date
       hard_deletes: invalidate
+
+      persist_docs:
+       relation: true
+       columns: true
+
+      snapshot_meta_column_names:
+        dbt_scd_id: store_key
+        dbt_valid_from: store_valid_from
+        dbt_valid_to: store_valid_to
+        dbt_updated_at: store_updated_at
+
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["dylan.ea"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+      docs:
+        show: true
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: store_id
+        description: "Natural key. business_entity_id of SALES.STORE. Not unique here -- a store has one row per version; gld_dim_store filters to the current row."
+        data_tests:
+          - not_null
+
+      # --- store -------------------------------------------------------------
+      - name: store_name
+        description: "Name of the reseller store."
+        data_tests: [not_null]
+
+      - name: store_business_type
+        description: "Self-reported business type code as delivered by the source: BM, OS or BS."
+
+      - name: store_specialty
+        description: "Self-reported specialty of the store."
+
+      - name: store_year_opened
+        description: "Self-reported year the store opened."
+
+      - name: store_square_feet
+        description: "Self-reported floor area in square feet."
+
+      - name: store_number_employees
+        description: "Self-reported number of employees."
+
+      - name: store_brand_count
+        description: "Self-reported brand count. Text, not numeric: the source carries '4+' alongside '2' and '3'."
+
+      - name: store_internet_connection_type
+        description: "Self-reported type of internet connection."
+
+      - name: store_bank_name
+        description: "Self-reported bank used by the store."
+
+      - name: store_annual_sales
+        description: "Self-reported annual sales in dollars."
+
+      - name: store_annual_revenue
+        description: "Self-reported annual revenue in dollars."
+
+      # --- assigned salesperson ------------------------------------------------
+      - name: sales_person_id
+        description: "FK to the salesperson who serves the store (business_entity_id)."
+        data_tests: [not_null]
+
+      - name: sales_person_key
+        description: "person_key of the salesperson, resolved in silver from adw_core slv_adventure_works_person__person. Null if the salesperson is not found there."
+
+      - name: sales_person_full_name
+        description: "Display name of the salesperson, resolved in silver from adw_core slv_adventure_works_person__person. Contains PII."
+        config:
+          meta: { contains_pii: true }
+
+      # --- audit -----------------------------------------------------------------
+      - name: store_modified_date
+        description: "Last change to the store in the source system. Drives the timestamp strategy's updated_at."
+
+      # --- dbt snapshot metadata --------------------------------------------
+      - name: store_key
+        description: "PK. Surrogate key dbt mints per version row (hash of unique_key + updated_at)."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: store_updated_at
+        description: "store_modified_date as of this version, copied in by the timestamp strategy."
+        data_tests: [not_null]
+
+      - name: store_valid_from
+        description: "Timestamp this version became current."
+        data_tests: [not_null]
+
+      - name: store_valid_to
+        description: "Timestamp this version stopped being current. Null means this is the current row for the store, including rows closed out via hard_deletes: invalidate when the store disappears from the source."
