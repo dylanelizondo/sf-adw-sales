@@ -132,7 +132,7 @@ models:
         data_tests:
           - relationships:
               arguments:
-                to: ref('slv_adventure_works_sales__sales_territory')
+                to: ref('slv_dim_adventure_works_sales__sales_territory')
                 field: territory_id
 
       - name: primary_address_id
