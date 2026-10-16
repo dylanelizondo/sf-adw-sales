@@ -10,13 +10,11 @@ models:
         renames them to snake_case — that alignment happens once here, not in bronze.
 
     config:
-      post_hook:
-        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_sales_reason PRIMARY KEY (sales_reason_key)"
       meta:
         atlan:
           attributes:
             ownerUsers: ["calfarol"]
-            ownerGroups: ["sales_adw"]
+            ownerGroups: ["sales_adventure_works"]
             certificateStatus: DRAFT
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"

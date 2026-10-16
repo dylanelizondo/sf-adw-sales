@@ -9,6 +9,6 @@ select
     , from_currency_code
     , to_currency_code
     , count(*) as n_rows
-from {{ ref('slv_sales__currency_rate') }}
+from {{ ref('slv_adventure_works_sales__currency_rate') }}
 group by 1, 2, 3
 having count(*) > 1

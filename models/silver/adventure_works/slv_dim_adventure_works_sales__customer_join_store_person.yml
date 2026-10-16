@@ -1,0 +1,96 @@
+version: 2
+
+models:
+  - name: slv_dim_adventure_works_sales__customer_join_store_person
+    description: >
+        Customers joined to their store and person, read straight from bronze (same as
+        slv_dim_adventure_works_sales__store_join_person). One row per customer (19,820, equal to
+        bronze Sales.Customer). Adds the customer's display name: the store name for reseller
+        stores and the person's full name for individual customers. Natural key only; no
+        surrogate key. Survey attributes that come from XML are not carried here; they move
+        to silver once the XML is flattened in bronze.
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["mlara"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # slv_dim_adventure_works_sales__customer_join_store_person
+
+            Customers joined to their store and person, read straight from bronze (same as slv_dim_adventure_works_sales__store_join_person). One row per customer (19,820, equal to bronze Sales.Customer). Adds the customer's display name: the store name for reseller stores and the person's full name for individual customers. Natural key only; no surrogate key. Survey attributes that come from XML are not carried here; they move to silver once the XML is flattened in bronze.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | CUSTOMER_ID | Natural key. Unique identifier of the customer in the source system. |
+            | CUSTOMER_TYPE | Customer classification, derived here from the raw store/person ids. INDIVIDUAL when only a person is set, STORE when a store is set (a store wins over a person for the 635 ambiguous rows), UNKNOWN when neither is set. |
+            | CUSTOMER_NAME | Display name: the store name for STORE customers, the person's full name for INDIVIDUAL customers, 'Unknown' when neither is available (the every_customer_has_a_name test fails if that happens). Contains personal names for individuals. |
+            | ACCOUNT_NUMBER | Customer account number, derived in the source system. Surfaced as-is; issue #34 flags it as ambiguous, so do not use it as a key. |
+            | STORE_ID | FK to the reseller store (business_entity_id). Null for individuals. |
+            | PERSON_ID | FK to the person behind an individual customer (business_entity_id in adw_core's slv_adventure_works_person__person). Null for store-only customers. |
+            | TERRITORY_ID | FK to the sales territory the customer belongs to. |
+            | CUSTOMER_MODIFIED_DATE | Timestamp of the last change to the customer record in the source system, cast from text here. The updated_at column for a later incremental or snapshot dimension. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- key ------------------------------------------------------------
+      - name: customer_id
+        description: "Natural key. Unique identifier of the customer in the source system."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- customer --------------------------------------------------------------
+      - name: customer_type
+        description: "Customer classification, derived here from the raw store/person ids. INDIVIDUAL when only a person is set, STORE when a store is set (a store wins over a person for the 635 ambiguous rows), UNKNOWN when neither is set."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["INDIVIDUAL", "STORE", "UNKNOWN"]
+
+      - name: customer_name
+        description: "Display name: the store name for STORE customers, the person's full name for INDIVIDUAL customers, 'Unknown' when neither is available (the every_customer_has_a_name test fails if that happens). Contains personal names for individuals."
+
+      - name: account_number
+        description: "Customer account number, derived in the source system. Surfaced as-is; issue #34 flags it as ambiguous, so do not use it as a key."
+
+      # --- foreign keys ------------------------------------------------------------
+      - name: store_id
+        description: "FK to the reseller store (business_entity_id). Null for individuals."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__store')
+                field: business_entity_id
+
+      - name: person_id
+        description: "FK to the person behind an individual customer (business_entity_id in adw_core's slv_adventure_works_person__person). Null for store-only customers."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_person__person')
+                field: business_entity_id
+
+      - name: territory_id
+        description: "FK to the sales territory the customer belongs to."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_territory')
+                field: territory_id
+
+      # --- audit -------------------------------------------------------------
+      - name: customer_modified_date
+        description: "Timestamp of the last change to the customer record in the source system, cast from text here. The updated_at column for a later incremental or snapshot dimension."

@@ -4,19 +4,18 @@ models:
   - name: slv_adventure_works_sales__customer
     description: >
         Silver table over ADVENTURE_WORKS.SALES.CUSTOMER. One row per customer (19,820).
-        Mints customer_key and resolves the customer_type ambiguity present in the source:
-        635 rows carry both PERSON_ID and STORE_ID; this model treats them as STORE customers
-        because the store relationship is the authoritative sales entity. account_number is
-        surfaced as-is from the source system.
+        Resolves the customer_type ambiguity present in the source: 635 rows carry both
+        PERSON_ID and STORE_ID; this model treats them as STORE customers because the store
+        relationship is the authoritative sales entity. account_number is surfaced as-is
+        from the source system. No surrogate key is minted here -- customer_id is the
+        natural key; gold mints its own autoincrementing client_key.
 
     config:
-      post_hook:
-        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_customer PRIMARY KEY (customer_key)"
       meta:
         atlan:
           attributes:
             ownerUsers: ["calfarol"]
-            ownerGroups: ["sales_adw"]
+            ownerGroups: ["sales_adventure_works"]
             certificateStatus: DRAFT
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
@@ -27,15 +26,14 @@ models:
 
             Silver table over ADVENTURE_WORKS.SALES.CUSTOMER. One row per customer (19,820).
             Resolves the customer_type ambiguity: 635 rows carry both PERSON_ID and STORE_ID;
-            STORE wins. Mints customer_key as the surrogate key inherited by gold dimensions.
-
+            STORE wins. 
+            
             **Layer:** silver
             **Subject area:** Sales
 
             | Column | Description |
             | --- | --- |
-            | CUSTOMER_KEY | PK. Surrogate key, md5 of customer_id. |
-            | CUSTOMER_ID | Natural key. Unique identifier of the customer. |
+            | CUSTOMER_ID | PK. Natural key. Unique identifier of the customer. |
             | PERSON_ID | FK to PERSON. Retail buyer. Null when customer is a store. |
             | STORE_ID | FK to STORE. Reseller store. Null when customer is an individual. |
             | TERRITORY_ID | FK to SALES_TERRITORY. Sales territory this customer belongs to. |
@@ -48,16 +46,10 @@ models:
     columns:
 
       # --- keys ----------------------------------------------------------
-      - name: customer_key
-        description: >
-            PK. Surrogate key, md5 of customer_id. Inherited by gold dimensions;
-            never recomputed downstream.
-        data_tests:
-          - unique
-          - not_null
-
       - name: customer_id
-        description: "Natural key. Unique identifier of the customer in the source system."
+        description: >
+            PK. Natural key. Unique identifier of the customer in the source system. No
+            surrogate key is minted here; gold mints its own autoincrementing client_key.
         data_tests:
           - unique
           - not_null
@@ -65,7 +57,7 @@ models:
       # --- foreign keys --------------------------------------------------
       - name: person_id
         description: >
-            FK to adw_core slv_person (business_entity_id). Identifies the individual retail buyer.
+            FK to adw_core slv_adventure_works_person__person (business_entity_id). Identifies the individual retail buyer.
             Null when the customer is a store (customer_type = STORE).
         data_tests:
           - relationships:
@@ -75,7 +67,7 @@ models:
 
       - name: store_id
         description: >
-            FK to slv_adventure_works_sales__store (business_entity_id). Identifies the reseller store.
+            FK to slv_dim_adventure_works_sales__store_join_person (business_entity_id). Identifies the reseller store.
             Null when the customer is an individual (customer_type = INDIVIDUAL).
         data_tests:
           - relationships:
@@ -84,7 +76,7 @@ models:
                 field: business_entity_id
 
       - name: territory_id
-        description: "FK to slv_adventure_works_sales__sales_territory. Sales territory this customer belongs to."
+        description: "FK to slv_dim_adventure_works_sales__sales_territory. Sales territory this customer belongs to."
         data_tests:
           - relationships:
               arguments:

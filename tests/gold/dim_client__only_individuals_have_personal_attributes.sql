@@ -1,0 +1,18 @@
+-- Personal attributes (primary address and the survey answers) belong to INDIVIDUAL clients only.
+-- A row returned here is a STORE or UNKNOWN client that received personal data, for example one of
+-- the 635 customers that carry both a person and a store id.
+select
+    customer_id,
+    client_type
+from {{ ref('gld_dim_client') }}
+where client_type != 'INDIVIDUAL'
+  and (
+         primary_address_id is not null
+      or client_has_demographics_survey is not null
+      or client_age_band is not null
+      or client_education is not null
+      or client_occupation is not null
+      or client_total_children is not null
+      or client_number_cars_owned is not null
+      or client_is_home_owner is not null
+  )

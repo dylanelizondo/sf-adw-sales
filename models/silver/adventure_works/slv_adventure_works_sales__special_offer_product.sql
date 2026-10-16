@@ -11,6 +11,6 @@ select
     rowguid,
 
     -- audit ---------------------------------------------------------------
-    try_to_timestamp(modified_date) as special_offer_product_modified_date
+    modified_date as special_offer_product_modified_date
 
 from {{ ref('adw_core', 'brz_adventure_works_sales__special_offer_product') }}

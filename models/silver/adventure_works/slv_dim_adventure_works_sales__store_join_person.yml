@@ -1,0 +1,172 @@
+version: 2
+
+models:
+  - name: slv_dim_adventure_works_sales__store_join_person
+    description: >
+        Reseller stores that buy from AdventureWorks, with the salesperson who serves each
+        one. One row per store (701, equal to SALES.STORE). store_id (business_entity_id) is
+        the natural key -- no surrogate key is minted here, gold mints its own store_key.
+        Shreds the StoreSurvey demographics XML (answered by every store) into typed
+        store_* columns so gold doesn't carry XML parsing.
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["dylan.ea"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Store"
+          readme: |
+            # slv_dim_adventure_works_sales__store_join_person
+
+            Reseller stores that buy from AdventureWorks over ADVENTURE_WORKS.SALES.STORE, with the
+            salesperson who serves each one. One row per store (701). store_id (business_entity_id)
+            is the natural key -- no surrogate key is minted here, gold mints its own. Shreds the
+            StoreSurvey demographics XML (answered by every store) into typed store_* columns, and
+            resolves the assigned salesperson's identity from adw_core's slv_adventure_works_person__person.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | STORE_ID | PK. Natural key. PK of SALES.STORE and FK to PERSON.BUSINESS_ENTITY. No surrogate key is minted here -- gold mints its own STORE_KEY. |
+            | STORE_NAME | Name of the reseller store. Not unique: 2 pairs of stores share a name. |
+            | SALES_PERSON_ID | FK to the salesperson who serves this store. |
+            | STORE_ANNUAL_SALES | Self-reported annual sales in dollars. |
+            | STORE_ANNUAL_REVENUE | Self-reported annual revenue in dollars. |
+            | STORE_BANK_NAME | Self-reported bank used by the store. |
+            | STORE_BUSINESS_TYPE | Self-reported business type code: BM, OS, or BS. |
+            | STORE_YEAR_OPENED | Year the store opened. Observed range 1970-2001. |
+            | STORE_SPECIALTY | Self-reported product specialty: Road, Mountain, or Touring. |
+            | STORE_SQUARE_FEET | Self-reported store size in square feet. |
+            | STORE_BRAND_COUNT | Self-reported number of brands carried, as text (for example "2", "4+", "AW"). |
+            | STORE_INTERNET_CONNECTION_TYPE | Self-reported internet connection type: ISDN, DSL, T1, T2, or T3. |
+            | STORE_NUMBER_EMPLOYEES | Self-reported employee count. |
+            | SALES_PERSON_ID | FK to the salesperson who serves this store. |
+            | SALES_PERSON_KEY | person_key of the salesperson, from adw_core slv_adventure_works_person__person. |
+            | SALES_PERSON_FULL_NAME | Display name of the salesperson, from adw_core slv_adventure_works_person__person. |
+            | STORE_MODIFIED_DATE | Last change to this store in the source system, cast from text. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: store_id
+        description: >
+            Natural key. PK of SALES.STORE and FK to PERSON.BUSINESS_ENTITY, the universal
+            identifier shared across the AdventureWorks party model. No surrogate key is
+            minted here -- gold mints its own store_key.
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_person__business_entity')
+                field: business_entity_id
+
+      # --- identity ----------------------------------------------------------
+      - name: store_name
+        description: "Name of the reseller store. Not unique: 2 pairs of stores share a name."
+        data_tests: [not_null]
+
+      - name: sales_person_id
+        description: "FK to the salesperson who serves this store."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_person')
+                field: business_entity_id
+
+      # --- demographics: StoreSurvey XML, shredded ----------------------------
+      # Every one of the 701 stores answered the survey (confirmed non-null), so unlike
+      # adw_core's person survey these columns carry no "never surveyed" null case.
+      - name: store_annual_sales
+        description: "Self-reported annual sales in dollars."
+        data_tests: [not_null]
+
+      - name: store_annual_revenue
+        description: "Self-reported annual revenue in dollars."
+        data_tests: [not_null]
+
+      - name: store_bank_name
+        description: "Self-reported bank used by the store."
+        data_tests: [not_null]
+
+      - name: store_business_type
+        description: >
+            Self-reported business type code as delivered by the source: BM, OS or BS.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["BM", "OS", "BS"]
+
+      - name: store_year_opened
+        description: "Year the store opened. Observed range 1970-2001."
+        data_tests: [not_null]
+
+      - name: store_specialty
+        description: "Self-reported product specialty."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Road", "Mountain", "Touring"]
+
+      - name: store_square_feet
+        description: "Self-reported store size in square feet."
+        data_tests: [not_null]
+
+      - name: store_brand_count
+        description: >
+            Self-reported number of brands carried, as text. NOT numeric: the source value
+            "4+" sits alongside "2" and "3" and an AdventureWorks-exclusive "AW", so this is
+            never cast.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["2", "3", "4+", "AW"]
+
+      - name: store_internet_connection_type
+        description: "Self-reported internet connection type: ISDN, DSL, T1, T2 or T3."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["ISDN", "DSL", "T1", "T2", "T3"]
+
+      - name: store_number_employees
+        description: "Self-reported employee count."
+        data_tests: [not_null]
+
+      # --- assigned salesperson ------------------------------------------------
+      - name: sales_person_id
+        description: "FK to the salesperson who serves this store."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_person')
+                field: business_entity_id
+
+      - name: sales_person_key
+        description: "person_key of the salesperson, from adw_core slv_adventure_works_person__person. Null if the salesperson is not found there."
+
+      - name: sales_person_full_name
+        description: "Display name of the salesperson, from adw_core slv_adventure_works_person__person. Contains PII."
+        config:
+          meta: { contains_pii: true }
+
+      # --- audit ---------------------------------------------------------
+      - name: store_modified_date
+        description: >
+            Last change to this store in the source system. The source lands this as text,
+            so it is cast here.

@@ -62,14 +62,14 @@ models:
     silver:
       +database: "{{ env_var('DBT_DB_ADW_SILVER') }}"
       +schema: SALES
-      +materialized: table
+      +materialized: view
       +tags: ["silver"]
       +group: sales_adventure_works
 
     gold:
       +database: "{{ env_var('DBT_DB_ADW_GOLD') }}"
       +schema: SALES
-      +materialized: view
+      +materialized: table
       +tags: ["gold"]
       +group: sales_adventure_works
 

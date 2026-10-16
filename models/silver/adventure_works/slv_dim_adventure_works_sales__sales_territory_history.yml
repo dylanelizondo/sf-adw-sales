@@ -15,7 +15,7 @@ models:
         atlan:
           attributes:
             ownerUsers: ["calfarol"]
-            ownerGroups: ["sales_adw"]
+            ownerGroups: ["sales_adventure_works"]
             certificateStatus: DRAFT
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
@@ -35,7 +35,7 @@ models:
             | Column | Description |
             | --- | --- |
             | BUSINESS_ENTITY_ID | Part of composite PK. FK to slv_adventure_works_sales__sales_person. |
-            | TERRITORY_ID | Part of composite PK. FK to slv_adventure_works_sales__sales_territory. |
+            | TERRITORY_ID | Part of composite PK. FK to slv_dim_adventure_works_sales__sales_territory. |
             | START_DATE | Part of composite PK. Date the salesperson took over the territory. |
             | END_DATE | Date the salesperson left the territory. NULL = current assignment. |
             | IS_CURRENT_ASSIGNMENT | True when end_date is NULL. |
@@ -60,7 +60,7 @@ models:
 
       - name: territory_id
         description: >
-            Part of the composite PK. FK to slv_adventure_works_sales__sales_territory. The territory the
+            Part of the composite PK. FK to slv_dim_adventure_works_sales__sales_territory. The territory the
             salesperson was assigned to.
         data_tests:
           - not_null
