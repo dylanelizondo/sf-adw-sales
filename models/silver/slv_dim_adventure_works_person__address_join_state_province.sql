@@ -11,6 +11,7 @@ select
     sp.territory_id,
     a.modified_date                                   as address_modified_date
 
+
 from {{ ref('slv_adventure_works_person__address') }} as a
 left join {{ ref('slv_adventure_works_person__state_province') }} as sp
     on a.state_province_id = sp.state_province_id
