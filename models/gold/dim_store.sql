@@ -34,5 +34,5 @@ select
     s.store_modified_date
 
 from {{ ref('slv_adventure_works_sales__store') }} as s
-left join {{ ref('adw_core', 'slv_person') }} as p
+left join {{ ref('adw_core', 'slv_adventure_works_person__person') }} as p
     on s.sales_person_id = p.business_entity_id
