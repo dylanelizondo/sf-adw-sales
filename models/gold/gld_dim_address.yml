@@ -1,0 +1,64 @@
+version: 2
+
+models:
+  - name: gld_dim_address
+    description: >
+        Gold dimension of AdventureWorks addresses. SCD Type 1 (dbt incremental, merge
+        on address_id): one row per address, attributes overwritten in place. Straight
+        select from slv_dim_adventure_works_person__address_join_state_province with no
+        JOINs. address_key is a surrogate key minted here with
+        dbt_utils.generate_surrogate_key; address_id stays as the natural key. A post_hook
+        (upsert_default_rows) adds two default rows, address_id -1 (Missing) and -2 (Not
+        Applicable), so facts with an unknown address still join.
+        Built as DIM_ADDRESS in Snowflake. Issue #27.
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: address_key
+        description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over address_id."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: address_id
+        description: "Natural key, address_id of PERSON.ADDRESS. Merge key of the incremental model. -1 and -2 are the default rows."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- address -------------------------------------------------------------
+      - name: address_line1
+        description: "First line of the street address."
+        data_tests: [not_null]
+
+      - name: address_line2
+        description: "Second line of the street address, when present."
+
+      - name: city
+        description: "City of the address."
+        data_tests: [not_null]
+
+      - name: postal_code
+        description: "Postal/ZIP code of the address."
+        data_tests: [not_null]
+
+      # --- foreign keys ----------------------------------------------------
+      - name: state_province_id
+        description: "State/province identifier from PERSON.STATE_PROVINCE."
+
+      - name: state_province_code
+        description: "State/province code."
+
+      - name: state_province_name
+        description: "State/province name."
+
+      - name: country_region_code
+        description: "ISO country/region code of the state/province."
+
+      - name: territory_id
+        description: "Sales territory associated with the state/province."
+
+      # --- audit -------------------------------------------------------------
+      - name: address_modified_date
+        description: "Last change to the address in the source system."
