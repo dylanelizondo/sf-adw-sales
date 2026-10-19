@@ -76,7 +76,7 @@ models:
                 field: business_entity_id
 
       - name: territory_id
-        description: "FK to slv_adventure_works_sales__sales_territory. Sales territory this customer belongs to."
+        description: "FK to slv_dim_adventure_works_sales__sales_territory. Sales territory this customer belongs to."
         data_tests:
           - relationships:
               arguments:
