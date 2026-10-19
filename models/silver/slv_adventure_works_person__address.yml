@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_person__address
+    config:
+      alias: address
+    description: >
+        Silver model for AdventureWorks addresses. One row per address_id, straight
+        select from PERSON.ADDRESS. SPATIAL_LOCATION (SQL Server geospatial type) and
+        ROWGUID are intentionally dropped.
+
+    columns:
+      - name: address_id
+        description: "Natural key, address_id of PERSON.ADDRESS."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: address_line1
+        description: "First line of the street address."
+        data_tests: [not_null]
+
+      - name: address_line2
+        description: "Second line of the street address, when present."
+
+      - name: city
+        description: "City of the address."
+        data_tests: [not_null]
+
+      - name: state_province_id
+        description: "State/province identifier, foreign key to PERSON.STATE_PROVINCE."
+        data_tests: [not_null]
+
+      - name: postal_code
+        description: "Postal/ZIP code of the address."
+        data_tests: [not_null]
+
+      - name: modified_date
+        description: "Last change to the address in the source system."
+
+      - name: _loaded_at
+        description: "Timestamp when this row was loaded into silver."
+
+      - name: _source_relation
+        description: "Fully qualified name of the source table."

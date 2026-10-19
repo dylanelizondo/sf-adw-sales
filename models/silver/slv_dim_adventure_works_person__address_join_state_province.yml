@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: slv_dim_adventure_works_person__address_join_state_province
+    description: >
+        Silver join model combining address with its state/province attributes, so gold
+        reads from ONE pre-joined silver model with no JOINs, per team convention. One
+        row per address_id, left join on state_province_id.
+
+    columns:
+      - name: address_id
+        description: "Natural key, address_id of PERSON.ADDRESS."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: address_line1
+        description: "First line of the street address."
+        data_tests: [not_null]
+
+      - name: address_line2
+        description: "Second line of the street address, when present."
+
+      - name: city
+        description: "City of the address."
+        data_tests: [not_null]
+
+      - name: postal_code
+        description: "Postal/ZIP code of the address."
+        data_tests: [not_null]
+
+      - name: state_province_id
+        description: "State/province identifier from PERSON.STATE_PROVINCE."
+
+      - name: state_province_code
+        description: "State/province code."
+
+      - name: state_province_name
+        description: "State/province name."
+
+      - name: country_region_code
+        description: "ISO country/region code of the state/province."
+
+      - name: territory_id
+        description: "Sales territory associated with the state/province."
+
+      - name: address_modified_date
+        description: "Last change to the address in the source system."
