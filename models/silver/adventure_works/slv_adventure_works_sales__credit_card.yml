@@ -2,6 +2,8 @@ version: 2
 
 models:
   - name: slv_adventure_works_sales__credit_card
+    config: 
+      alias: credit_card
     description: >
       Silver model for CREDIT_CARD. PII NOTE: the raw CARD_NUMBER (14-digit PAN) is never
       landed in silver. We expose only CARD_LAST_FOUR and a one-way hash (CARD_NUMBER_HASH)
