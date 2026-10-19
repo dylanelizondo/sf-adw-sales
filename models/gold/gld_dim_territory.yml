@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: gld_dim_territory
+    description: >
+        Gold dimension of AdventureWorks sales territories. SCD Type 1 (dbt incremental, merge
+        on territory_id): one row per territory (10), attributes overwritten in place. Straight
+        select from slv_dim_adventure_works_sales__sales_territory with no JOINs. territory_key
+        is a surrogate key minted here with dbt_utils.generate_surrogate_key; territory_id stays
+        as the natural key. A post_hook (upsert_default_rows) adds two default rows,
+        territory_id -1 (Missing) and -2 (Not Applicable), so facts with an unknown territory
+        still join. The *_YTD / *_LAST_YEAR snapshot columns are excluded on purpose.
+        Built as DIM_TERRITORY in Snowflake. Issue #26.
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: territory_key
+        description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over territory_id."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: territory_id
+        description: "Natural key, territory_id of SALES.SALES_TERRITORY. Merge key of the incremental model. -1 and -2 are the default rows."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- territory ---------------------------------------------------------
+      - name: territory_name
+        description: "Name of the sales territory."
+        data_tests: [not_null]
+
+      - name: country_region_code
+        description: "ISO country/region code for the territory."
+        data_tests: [not_null]
+
+      - name: territory_group
+        description: "Geographic group this territory belongs to (Europe, North America, Pacific)."
+
+      # --- audit ---------------------------------------------------------------
+      - name: territory_modified_date
+        description: "Last change to the territory in the source system."

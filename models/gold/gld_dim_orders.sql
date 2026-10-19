@@ -3,7 +3,7 @@
         materialized='incremental',
         unique_key='sales_order_id',
         incremental_strategy='merge',
-        alias='adw_dim_orders'
+        alias='dim_orders'
     )
 }}
 
@@ -22,7 +22,51 @@
 -- last run are re-selected (watermarked on order_modified_date); see the dbt incremental-
 -- strategy docs: https://docs.getdbt.com/docs/build/incremental-strategy
 
-select s.*
+select 
+    {{ dbt_utils.generate_surrogate_key(['sales_order_id']) }} as store_key,
+    s.sales_order_id,
+
+    -- identifiers -----------------------------------------------------------
+    s.sales_order_number,
+    s.purchase_order_number,
+    s.account_number,
+    s.revision_number,
+
+    -- dates -------------------------------------------------------------------
+    s.order_date,
+    s.due_date,
+    s.ship_date,
+    s.is_shipped,
+
+    -- status and channel ----------------------------------------------------
+    s.order_status_code,
+    s.order_status_label,
+    s.is_online_order,
+    s.order_channel,
+
+    -- foreign keys ------------------------------------------------------------
+    s.customer_id,
+    s.sales_person_id,
+    s.territory_id,
+    s.bill_to_address_id,
+    s.ship_to_address_id,
+    s.ship_method_id,
+    s.credit_card_id,
+    s.currency_rate_id,
+
+    -- amounts -----------------------------------------------------------------
+    s.sub_total,
+    s.tax_amt,
+    s.freight,
+    s.total_due,
+
+    -- order-level line metrics --------------------------------------------------
+    s.order_line_count,
+    s.order_total_qty,
+    s.order_total_revenue,
+
+    -- audit -------------------------------------------------------------------
+    s.order_modified_date
 
 from {{ ref('slv_dim_adventure_works_sales__sales_order_header_join_detail') }} as s
 
