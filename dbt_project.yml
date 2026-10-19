@@ -62,14 +62,14 @@ models:
     silver:
       +database: "{{ env_var('DBT_DB_ADW_SILVER') }}"
       +schema: SALES
-      +materialized: table
+      +materialized: view
       +tags: ["silver"]
       +group: sales_adventure_works
 
     gold:
       +database: "{{ env_var('DBT_DB_ADW_GOLD') }}"
       +schema: SALES
-      +materialized: view
+      +materialized: table
       +tags: ["gold"]
       +group: sales_adventure_works
 
@@ -79,3 +79,12 @@ models:
       +materialized: view
       +tags: ["gold"]
       +group: sales_adventure_works
+
+vars:
+  default_rows:
+    by_type:
+      text:      ['Missing', 'Not Applicable']
+      number:    [-1, -2]
+      date:      ['1900-01-01', '1900-01-01']
+      timestamp: ['1900-01-01 00:00:00', '1900-01-01 00:00:00']
+      boolean:   [false, false]

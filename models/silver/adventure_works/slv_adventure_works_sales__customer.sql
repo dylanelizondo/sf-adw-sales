@@ -9,8 +9,6 @@
 
 select
     -- keys ----------------------------------------------------------------
-    md5(cast(coalesce(cast(customer_id as varchar),
-                      '_dbt_utils_surrogate_key_null_') as varchar)) as customer_key,
     customer_id,
 
     -- foreign keys --------------------------------------------------------
@@ -32,6 +30,6 @@ select
     account_number,
 
     -- audit ---------------------------------------------------------------
-    try_to_timestamp(modified_date) as customer_modified_date
+    modified_date as customer_modified_date
 
 from {{ ref('adw_core', 'brz_adventure_works_sales__customer') }}

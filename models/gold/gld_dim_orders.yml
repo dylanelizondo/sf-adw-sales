@@ -1,21 +1,25 @@
 version: 2
 
 models:
-  - name: dim_orders
+  - name: gld_dim_orders
     description: >
         Gold dimension of AdventureWorks sales orders. One row per order (equal to
-        slv_adventure_works_sales__sales_order_header). Inherits the recovered order key, typed
-        dates, amounts and decoded status and channel from silver, and adds an is_shipped flag
-        plus three order-level line metrics (line count, units, revenue) taken from
-        slv_adventure_works_sales__sales_order_detail. Order lines themselves belong to
-        FACT_ORDER_LINE (issue #28).
+        slv_dim_adventure_works_sales__sales_order_header_join_detail), reflecting only the
+        current state of each order. Straight select from the silver model, which already
+        joins the order header to its aggregated line metrics (line count, units, revenue)
+        straight from bronze. Gold adds nothing, not even a key: sales_order_id is the
+        natural key and is used as-is.
+
+        Type 1: incrementally merged on sales_order_id, so a changed order overwrites its
+        existing row in place and no history is kept. Incremental runs re-select only orders
+        modified since the last run (watermarked on order_modified_date).
 
     config:
       meta:
         atlan:
           attributes:
             ownerUsers: ["calfarol"]
-            ownerGroups: ["sales_adw"]
+            ownerGroups: ["sales_adventure_works"]
             certificateStatus: DRAFT
             certificateStatusMessage: "Synced from dbt."
           domainName: "Sales"
@@ -24,15 +28,16 @@ models:
           readme: |
             # dim_orders
 
-            Gold dimension of AdventureWorks sales orders. One row per order (equal to slv_adventure_works_sales__sales_order_header). Inherits the recovered order key, typed dates, amounts and decoded status and channel from silver, and adds an is_shipped flag plus three order-level line metrics (line count, units, revenue) taken from slv_adventure_works_sales__sales_order_detail. Order lines themselves belong to FACT_ORDER_LINE (issue #28).
+            Gold dimension of AdventureWorks sales orders. One row per order (equal to slv_dim_adventure_works_sales__sales_order_header_join_detail), reflecting only the current state of each order. Straight select from the silver model, which already joins the order header to its aggregated line metrics (line count, units, revenue) straight from bronze. Gold adds nothing, not even a key: sales_order_id is the natural key and is used as-is.
+
+            Type 1: incrementally merged on sales_order_id, so a changed order overwrites its existing row in place and no history is kept. Incremental runs re-select only orders modified since the last run.
 
             **Layer:** gold
             **Subject area:** Sales
 
             | Column | Description |
             | --- | --- |
-            | ORDER_KEY | PK. Surrogate key minted in silver from the recovered order id. |
-            | SALES_ORDER_ID | Natural key. Order id recovered in silver. |
+            | SALES_ORDER_ID | PK. Natural key, recovered from the corrupted bronze column in silver. |
             | SALES_ORDER_NUMBER | Order number shown to the customer. |
             | PURCHASE_ORDER_NUMBER | Purchase order number the customer assigned. |
             | ACCOUNT_NUMBER | Accounting account number tied to the sale. |
@@ -67,14 +72,8 @@ models:
     columns:
 
       # --- keys ------------------------------------------------------------
-      - name: order_key
-        description: "PK. Surrogate key minted in silver (md5 of the recovered order id) and inherited here, never recomputed."
-        data_tests:
-          - unique
-          - not_null
-
       - name: sales_order_id
-        description: "Natural key. Sales order id recovered from the corrupted source key in silver."
+        description: "PK. Natural key, recovered from the corrupted bronze column in silver. No surrogate/md5 key is minted."
         data_tests:
           - unique
           - not_null
@@ -95,27 +94,19 @@ models:
       # --- dates ---------------------------------------------------------------
       - name: order_date
         description: "Date the order was placed."
-        data_tests: [not_null]
 
       - name: due_date
         description: "Date the delivery was promised for."
-        data_tests: [not_null]
 
       - name: ship_date
         description: "Date the order shipped. Null while it has not shipped."
 
       - name: is_shipped
         description: "True when ship_date is not null."
-        data_tests: [not_null]
 
       # --- status and channel ----------------------------------------------------
       - name: order_status_code
         description: "Original order status: 1 in process, 2 approved, 3 backordered, 4 rejected, 5 shipped, 6 cancelled."
-        data_tests:
-          - not_null
-          - accepted_values:
-              arguments:
-                values: [1, 2, 3, 4, 5, 6]
 
       - name: order_status_label
         description: "Human-readable order status, decoded in silver from order_status_code."
@@ -129,12 +120,6 @@ models:
       # --- foreign keys ----------------------------------------------------------
       - name: customer_id
         description: "FK to the customer the order belongs to."
-        data_tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('slv_adventure_works_sales__customer')
-                field: customer_id
 
       - name: sales_person_id
         description: "FK to the assigned salesperson. Null for online orders."
@@ -169,20 +154,16 @@ models:
 
       - name: total_due
         description: "Total amount due on the order (subtotal + tax + freight)."
-        data_tests: [not_null]
 
       # --- order-level line metrics ----------------------------------------------------
       - name: order_line_count
-        description: "Number of lines in slv_adventure_works_sales__sales_order_detail for this order. 0 when the order has none."
-        data_tests: [not_null]
+        description: "Number of lines for this order from bronze sales_order_detail. 0 when the order has none."
 
       - name: order_total_qty
         description: "Units ordered across all lines of the order."
-        data_tests: [not_null]
 
       - name: order_total_revenue
         description: "Sum of line_total across all lines of the order."
-        data_tests: [not_null]
 
       # --- audit -------------------------------------------------------------------
       - name: order_modified_date

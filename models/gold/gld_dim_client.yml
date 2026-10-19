@@ -1,13 +1,14 @@
 version: 2
 
 models:
-  - name: dim_client
+  - name: gld_dim_client
     description: >
         Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to
-        slv_adventure_works_sales__customer). Inherits client_key from silver and adds the
+        slv_adventure_works_sales__customer). client_key is an auto-incrementing surrogate
+        key minted HERE, since silver carries no key of its own. Adds the
         client's display name: the store name for reseller stores and the person's full name for
         individual customers. Individual clients also carry a few non-sensitive self-reported
-        attributes from adw_core's slv_person (age band, education, occupation, children, cars,
+        attributes from adw_core's slv_adventure_works_person__person (age band, education, occupation, children, cars,
         home ownership); stores never do. Email, phone and the sensitive survey answers (gender,
         marital status, income band) are deliberately left out. Join dim_orders on customer_id and
         dim_store on store_id; store details live in dim_store.
@@ -26,14 +27,14 @@ models:
           readme: |
             # dim_client
 
-            Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to slv_adventure_works_sales__customer). Inherits client_key from silver and adds the client's display name: the store name for reseller stores and the person's full name for individual customers. Individual clients also carry a few non-sensitive self-reported attributes from adw_core's slv_person (age band, education, occupation, children, cars, home ownership); stores never do. Email, phone and the sensitive survey answers (gender, marital status, income band) are deliberately left out. Join dim_orders on customer_id and dim_store on store_id; store details live in dim_store.
+            Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to slv_adventure_works_sales__customer). client_key is an auto-incrementing surrogate key minted here, since silver carries no key of its own. Adds the client's display name: the store name for reseller stores and the person's full name for individual customers. Individual clients also carry a few non-sensitive self-reported attributes from adw_core's slv_adventure_works_person__person (age band, education, occupation, children, cars, home ownership); stores never do. Email, phone and the sensitive survey answers (gender, marital status, income band) are deliberately left out. Join dim_orders on customer_id and dim_store on store_id; store details live in dim_store.
 
             **Layer:** gold
             **Subject area:** Sales
 
             | Column | Description |
             | --- | --- |
-            | CLIENT_KEY | PK. Surrogate key minted in silver (md5 of the customer id) and inherited here, never recomputed. |
+            | CLIENT_KEY | PK. Auto-incrementing surrogate key minted here (silver carries no key of its own). |
             | CUSTOMER_ID | Natural key. Unique identifier of the customer in the source system; the column dim_orders joins on. |
             | CLIENT_TYPE | Client classification from silver. INDIVIDUAL when only a person is set, STORE when a store is set (a store wins over a person for the 635 ambiguous rows), UNKNOWN when neither is set. |
             | CLIENT_NAME | Display name: the store name for STORE clients, the person's full name for INDIVIDUAL clients, 'Unknown' when neither is available (the dim_client__every_client_has_a_name test fails if that happens). Contains personal names for individuals. |
@@ -47,9 +48,9 @@ models:
             | CLIENT_NUMBER_CARS_OWNED | Number of cars owned. Self-reported. |
             | CLIENT_IS_HOME_OWNER | Home ownership. Self-reported. |
             | STORE_ID | FK to dim_store (business_entity_id). Set when the client is a reseller store, null for individuals. |
-            | PERSON_ID | FK to the person behind an individual customer (business_entity_id in adw_core's slv_person). Null for store-only customers. |
+            | PERSON_ID | FK to the person behind an individual customer (business_entity_id in adw_core's slv_adventure_works_person__person). Null for store-only customers. |
             | TERRITORY_ID | FK to the sales territory the client belongs to. Will join to dim_territory once #26 is built. |
-            | PRIMARY_ADDRESS_ID | FK to the client's winning address, taken from slv_person. Will join to dim_address once #27 is built. Individual clients only; null for stores and for people with no address. |
+            | PRIMARY_ADDRESS_ID | FK to the client's winning address, taken from slv_adventure_works_person__person. Will join to dim_address once #27 is built. Individual clients only; null for stores and for people with no address. |
             | CLIENT_MODIFIED_DATE | Last change to the customer record in the source system. |
 
             _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
@@ -58,7 +59,7 @@ models:
 
       # --- keys ------------------------------------------------------------
       - name: client_key
-        description: "PK. Surrogate key minted in silver (md5 of the customer id) and inherited here, never recomputed."
+        description: "PK. Auto-incrementing surrogate key minted here (silver carries no key of its own)."
         data_tests:
           - unique
           - not_null
@@ -115,15 +116,15 @@ models:
         data_tests:
           - relationships:
               arguments:
-                to: ref('slv_adventure_works_sales__store')
-                field: business_entity_id
+                to: ref('slv_dim_adventure_works_sales__store_join_person')
+                field: store_id
 
       - name: person_id
-        description: "FK to the person behind an individual customer (business_entity_id in adw_core's slv_person). Null for store-only customers."
+        description: "FK to the person behind an individual customer (business_entity_id in adw_core's slv_adventure_works_person__person). Null for store-only customers."
         data_tests:
           - relationships:
               arguments:
-                to: ref('adw_core', 'slv_person')
+                to: ref('adw_core', 'slv_adventure_works_person__person')
                 field: business_entity_id
 
       - name: territory_id
@@ -131,11 +132,11 @@ models:
         data_tests:
           - relationships:
               arguments:
-                to: ref('slv_adventure_works_sales__sales_territory')
+                to: ref('slv_dim_adventure_works_sales__sales_territory')
                 field: territory_id
 
       - name: primary_address_id
-        description: "FK to the client's winning address, taken from slv_person. Will join to dim_address once #27 is built. Individual clients only; null for stores and for people with no address."
+        description: "FK to the client's winning address, taken from slv_adventure_works_person__person. Will join to dim_address once #27 is built. Individual clients only; null for stores and for people with no address."
 
       # --- audit -------------------------------------------------------------
       - name: client_modified_date

@@ -20,6 +20,6 @@ select
     try_to_date(date_created)       as date_created,
 
     -- audit ---------------------------------------------------------------
-    try_to_timestamp(modified_date) as shopping_cart_item_modified_date
+    modified_date as shopping_cart_item_modified_date
 
 from {{ ref('adw_core', 'brz_adventure_works_sales__shopping_cart_item') }}

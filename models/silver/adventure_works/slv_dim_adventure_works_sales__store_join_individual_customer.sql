@@ -1,19 +1,6 @@
--- dim_client
--- ONE row per client (customer). Row count equals slv_adventure_works_sales__customer (19,820),
--- enforced by tests/gold/dim_client__row_count_matches_silver.sql.
---
--- Reads from SILVER, never from bronze: client_key is minted in silver and inherited here.
--- customer_id stays as the natural key, so the dimension joins straight to dim_orders.
---
--- Adds the display name and, for individual customers only, non-sensitive self-reported
--- attributes from adw_core's slv_person (one row per business_entity_id, so no fan-out).
--- Email, phone and the SENSITIVE survey answers (gender, marital status, income band) are not
--- selected. The 635 customers with both a person and a store id are STORE clients and get no
--- personal data. Store details live in dim_store: join on store_id.
-
+{{ config(alias="stg_dim_store_join_individual_customer") }}
 select
     -- keys ----------------------------------------------------------------
-    c.customer_key                              as client_key,
     c.customer_id,
 
     -- client ------------------------------------------------------------------
@@ -47,8 +34,13 @@ select
     c.customer_modified_date                    as client_modified_date
 
 from {{ ref('slv_adventure_works_sales__customer') }} as c
+<<<<<<< HEAD:models/gold/dim_client.sql
 left join {{ ref('slv_adventure_works_sales__store') }} as s
     on c.store_id = s.business_entity_id
+=======
+left join {{ ref('slv_dim_adventure_works_sales__store_join_person') }} as s
+    on c.store_id = s.store_id
+>>>>>>> e6d42471aa9ce7d32bff9482e1b695d702dec3ec:models/silver/adventure_works/slv_dim_adventure_works_sales__store_join_individual_customer.sql
 left join {{ ref('adw_core', 'slv_adventure_works_person__person') }} as p
     on c.person_id = p.business_entity_id
    and c.customer_type = 'INDIVIDUAL'

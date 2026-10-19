@@ -10,8 +10,6 @@ models:
         the row count is not a reason to skip the layer.
 
     config:
-      post_hook:
-        - "ALTER TABLE {{ this }} ADD CONSTRAINT pk_slv_shopping_cart_item PRIMARY KEY (shopping_cart_item_key)"
       meta:
         atlan:
           attributes:
