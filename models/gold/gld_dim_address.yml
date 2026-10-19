@@ -12,6 +12,7 @@ models:
         Applicable), so facts with an unknown address still join.
         Built as DIM_ADDRESS in Snowflake. Issue #27.
 
+
     columns:
 
       # --- keys ------------------------------------------------------------

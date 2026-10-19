@@ -1,4 +1,18 @@
-{{ config(alias="dim_address") }}
+{{ config(
+    alias="dim_address",
+    materialized='incremental',
+    unique_key='address_id',
+    incremental_strategy='merge',
+    post_hook="{{ upsert_default_rows('address_id') }}"
+    )
+}}
+
+-- dim_address
+-- ONE row per address plus the two default rows (-1 Missing, -2 Not Applicable)
+-- that upsert_default_rows adds in the post_hook.
+--
+-- Type 1: merge keyed on address_id, so a changed address overwrites its row in place
+-- and no history is kept. Straight select from ONE silver model, no JOINs.
 
 select
     -- keys ------------------------------------------------------------------
