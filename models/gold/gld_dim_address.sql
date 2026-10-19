@@ -2,7 +2,7 @@
 
 select
     -- keys ------------------------------------------------------------------
-    {{ generate_surrogate_key(['address_id']) }} as address_key,
+   {{ dbt_utils.generate_surrogate_key(['address_id']) }} as address_key,
     a.address_id,
 
     -- address -------------------------------------------------------------------
