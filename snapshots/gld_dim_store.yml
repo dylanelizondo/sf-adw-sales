@@ -17,7 +17,7 @@ snapshots:
       check_cols: all
       updated_at: store_modified_date
       hard_deletes: invalidate
-      post_hook: "{{ upsert_default_rows('store_id', {'store_valid_to': [none, none]}) }}"
+      post_hook: "{{ upsert_default_rows('store_id') }}"
 
       persist_docs:
        relation: true
