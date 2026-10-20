@@ -4,7 +4,7 @@ select
     c.customer_id,
 
     -- client ------------------------------------------------------------------
-    c.customer_type.                            as client_type,
+    c.customer_type                             as client_type,
     coalesce(
         case c.customer_type
             when 'STORE'      then s.store_name
@@ -31,7 +31,7 @@ select
     p.primary_address_id,
 
     -- audit -------------------------------------------------------------------
-    c.customer_modified_date                    as client_modified_date
+    try_to_date(c.customer_modified_date,'YYYY-MM-DD' ) as client_modified_date
 
 from {{ ref('slv_adventure_works_sales__customer') }} as c
 left join {{ ref('slv_dim_adventure_works_sales__store_join_person') }} as s

@@ -1,3 +1,13 @@
+{# Turns a value into a SQL literal: quotes text/dates, leaves numbers/booleans as is #}
+{% macro _default_sql_literal(raw, col) %}
+  {%- set dtype = col.dtype | upper -%}
+  {%- if raw is none -%}null
+  {%- elif col.is_number() or dtype == 'BOOLEAN' -%}{{ raw }}
+  {%- else -%}'{{ raw | string | replace("'", "'") }}'
+  {%- endif -%}
+{% endmacro %}
+
+
 {# Inserts or updates ONLY the -1 and -2 rows.
    column_defaults (optional): {'column_name': [value_for_-1, value_for_-2]}
    Columns not listed fall back to var('default_rows').by_type #}
