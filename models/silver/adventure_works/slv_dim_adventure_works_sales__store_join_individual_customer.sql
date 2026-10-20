@@ -4,7 +4,7 @@ select
     c.customer_id,
 
     -- client ------------------------------------------------------------------
-    c.customer_type::varchar(15)                as client_type,
+    c.customer_type.                            as client_type,
     coalesce(
         case c.customer_type
             when 'STORE'      then s.store_name

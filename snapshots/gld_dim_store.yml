@@ -1,5 +1,5 @@
 snapshots:
-  - name: gld_dim_store_snapshot
+  - name: gld_dim_store
     relation: ref("slv_dim_adventure_works_sales__store_join_person")
     description: >
         Type 2 history of slv_dim_adventure_works_sales__store_join_person. One row per
@@ -10,8 +10,8 @@ snapshots:
         from here (dbt_valid_to is null); query this snapshot directly for history.
     config:
       database: "{{ env_var('DBT_DB_ADW_GOLD') }}"
-      schema: sales_snapshot
-      alias: dim_store_snapshot
+      schema: sales
+      alias: dim_store
       strategy: timestamp
       unique_key: store_id
       check_cols: all
