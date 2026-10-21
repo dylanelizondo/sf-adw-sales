@@ -20,8 +20,12 @@
 --
 -- Star schema fact at order-header grain: FKs point only at conformed gold dimensions
 -- (dim_client, dim_territory, dim_address, dim_sales_person, dim_credit_card), never at
--- another fact. ship_method_id and currency_rate_id are still kept as degenerate
--- dimensions -- no gold dimension exists for shipping method or currency rate yet.
+-- another fact. order_date/due_date/ship_date are also FKs, all three against adw_core's
+-- dim_date -- a role-playing dimension, same table referenced in three different roles,
+-- declared via relationships tests in the .yml rather than any join/cast here (dim_date's
+-- grain is the literal calendar date, so no surrogate key is needed to join to it).
+-- ship_method_id and currency_rate_id are still kept as degenerate dimensions -- no gold
+-- dimension exists for shipping method or currency rate yet.
 --
 -- Type 1: merge keyed on sales_order_id, so a changed order overwrites its existing row
 -- in place -- no history is kept here. On incremental runs only orders modified since the

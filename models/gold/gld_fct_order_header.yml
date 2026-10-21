@@ -11,11 +11,13 @@ models:
         is the natural key and is used as-is.
 
         Star schema: FKs point only at conformed gold dimensions (dim_client, dim_territory,
-        dim_address, dim_sales_person, dim_credit_card). ship_method_id and currency_rate_id
-        are still degenerate dimensions -- no gold dimension exists for shipping method or
-        currency rate yet, so they stay as plain attributes rather than FKs. Was previously
-        (mis)modeled as gld_dim_orders; it carries additive measures (sub_total, total_due,
-        order_total_revenue, ...), which makes it a fact, not a dimension.
+        dim_address, dim_sales_person, dim_credit_card, and adw_core's dim_date -- a
+        role-playing dimension referenced three times, once per order_date/due_date/ship_date).
+        ship_method_id and currency_rate_id are still degenerate dimensions -- no gold
+        dimension exists for shipping method or currency rate yet, so they stay as plain
+        attributes rather than FKs. Was previously (mis)modeled as gld_dim_orders; it
+        carries additive measures (sub_total, total_due, order_total_revenue, ...), which
+        makes it a fact, not a dimension.
 
         Type 1: incrementally merged on sales_order_id, so a changed order overwrites its
         existing row in place and no history is kept. Incremental runs re-select only orders
@@ -37,7 +39,7 @@ models:
 
             Gold fact of AdventureWorks sales orders, at order-header grain. One row per order (equal to slv_dim_adventure_works_sales__sales_order_header_join_detail), reflecting only the current state of each order. Straight select from the silver model, which already joins the order header to its aggregated line metrics (line count, units, revenue) straight from bronze. Gold adds nothing but the surrogate key: sales_order_id is the natural key and is used as-is.
 
-            Star schema: FKs point only at conformed gold dimensions (dim_client, dim_territory, dim_address, dim_sales_person, dim_credit_card). ship_method_id and currency_rate_id are still degenerate dimensions -- no gold dimension exists for shipping method or currency rate yet.
+            Star schema: FKs point only at conformed gold dimensions (dim_client, dim_territory, dim_address, dim_sales_person, dim_credit_card, and adw_core's dim_date -- role-playing across order_date/due_date/ship_date). ship_method_id and currency_rate_id are still degenerate dimensions -- no gold dimension exists for shipping method or currency rate yet.
 
             Type 1: incrementally merged on sales_order_id, so a changed order overwrites its existing row in place and no history is kept. Incremental runs re-select only orders modified since the last run.
 
@@ -52,9 +54,9 @@ models:
             | PURCHASE_ORDER_NUMBER | Purchase order number the customer assigned. |
             | ACCOUNT_NUMBER | Accounting account number tied to the sale. |
             | REVISION_NUMBER | Revision number of the document. |
-            | ORDER_DATE | Date the order was placed. |
-            | DUE_DATE | Date the delivery was promised for. |
-            | SHIP_DATE | Date the order shipped. Null while it has not shipped. |
+            | ORDER_DATE | Date the order was placed. FK to adw_core's dim_date (role-playing). |
+            | DUE_DATE | Date the delivery was promised for. FK to adw_core's dim_date (role-playing). |
+            | SHIP_DATE | Date the order shipped. Null while it has not shipped. FK to adw_core's dim_date (role-playing) when not null. |
             | IS_SHIPPED | True when ship_date is not null. |
             | ORDER_STATUS_CODE | Original status: 1 to 6. |
             | ORDER_STATUS_LABEL | Decoded status. |
@@ -107,15 +109,30 @@ models:
       - name: revision_number
         description: "Revision number of the document. Incremented on every change."
 
-      # --- dates ---------------------------------------------------------------
+      # --- dates: role-playing FK to adw_core's dim_date, once per role ----------------
       - name: order_date
-        description: "Date the order was placed."
+        description: "Date the order was placed. FK to adw_core's dim_date (role-playing: this is one of three roles the dimension plays on this fact)."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'gld_dim_date')
+                field: date_key
 
       - name: due_date
-        description: "Date the delivery was promised for."
+        description: "Date the delivery was promised for. FK to adw_core's dim_date (role-playing)."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'gld_dim_date')
+                field: date_key
 
       - name: ship_date
-        description: "Date the order shipped. Null while it has not shipped."
+        description: "Date the order shipped. Null while it has not shipped. FK to adw_core's dim_date (role-playing) when not null -- the relationships test ignores nulls."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'gld_dim_date')
+                field: date_key
 
       - name: is_shipped
         description: "True when ship_date is not null."
