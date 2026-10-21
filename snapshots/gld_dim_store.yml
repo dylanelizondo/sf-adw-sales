@@ -6,8 +6,9 @@ snapshots:
         store per version: a new row opens whenever any store attribute changes
         (check_cols: all), keyed on store_id and dated off store_modified_date. A store
         removed from the source closes out its current row rather than being deleted
-        (hard_deletes: invalidate). gld_dim_store reads only the current row per store
-        from here (dbt_valid_to is null); query this snapshot directly for history.
+        (hard_deletes: invalidate). A post_hook (upsert_default_rows) adds two default
+        rows, store_id -1 (Missing) and -2 (Not Applicable), so facts with an unknown
+        store still join; those rows are not versioned by the snapshot strategy.
     config:
       database: "{{ env_var('DBT_DB_ADW_GOLD') }}"
       schema: sales

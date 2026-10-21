@@ -6,3 +6,4 @@ select
     client_type
 from {{ ref('gld_dim_client') }}
 where client_name = 'Unknown'
+and customer_id not in (-1, -2)
