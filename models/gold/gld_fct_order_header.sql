@@ -3,28 +3,33 @@
         materialized='incremental',
         unique_key='sales_order_id',
         incremental_strategy='merge',
-        alias='dim_orders',
+        alias='fct_order_header',
         post_hook="{{ upsert_default_rows('sales_order_id') }}"
     )
 }}
 
--- dim_orders
+-- fct_order_header
 -- ONE row per sales order. Row count equals
 -- slv_dim_adventure_works_sales__sales_order_header_join_detail, enforced by
--- tests/gold/dim_orders__row_count_matches_silver.sql.
+-- tests/gold/fct_order_header__row_count_matches_silver.sql.
 --
 -- Reads from slv_dim_adventure_works_sales__sales_order_header_join_detail, which already
 -- joins the order header (recovered straight from bronze) to its aggregated line metrics.
 -- Straight select -- gold adds nothing, not even a key: sales_order_id is the natural key
 -- and is used as-is.
 --
+-- Star schema fact at order-header grain: FKs point only at conformed gold dimensions
+-- (dim_client, dim_territory, dim_address, dim_sales_person, dim_credit_card), never at
+-- another fact. ship_method_id and currency_rate_id are still kept as degenerate
+-- dimensions -- no gold dimension exists for shipping method or currency rate yet.
+--
 -- Type 1: merge keyed on sales_order_id, so a changed order overwrites its existing row
 -- in place -- no history is kept here. On incremental runs only orders modified since the
 -- last run are re-selected (watermarked on order_modified_date); see the dbt incremental-
 -- strategy docs: https://docs.getdbt.com/docs/build/incremental-strategy
 
-select 
-    {{ dbt_utils.generate_surrogate_key(['sales_order_id']) }} as store_key,
+select
+    {{ dbt_utils.generate_surrogate_key(['sales_order_id']) }} as order_key,
     s.sales_order_id,
 
     -- identifiers -----------------------------------------------------------
@@ -45,14 +50,16 @@ select
     s.is_online_order,
     s.order_channel,
 
-    -- foreign keys ------------------------------------------------------------
+    -- foreign keys to conformed dimensions -------------------------------------
     s.customer_id,
-    s.sales_person_id,
     s.territory_id,
     s.bill_to_address_id,
     s.ship_to_address_id,
-    s.ship_method_id,
+    s.sales_person_id,
     s.credit_card_id,
+
+    -- degenerate dimensions (no gold dimension built for these yet) -------------
+    s.ship_method_id,
     s.currency_rate_id,
 
     -- amounts -----------------------------------------------------------------

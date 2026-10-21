@@ -1,0 +1,95 @@
+version: 2
+
+models:
+  - name: slv_dim_adventure_works_sales__sales_person_join_person
+    description: >
+        AdventureWorks salespeople, with their display name resolved. One row per
+        salesperson (17, equal to slv_adventure_works_sales__sales_person). business_entity_id
+        is the natural key -- no surrogate key is minted here, gold mints its own
+        sales_person_key. Resolves the salesperson's full name from adw_core's
+        slv_adventure_works_person__person, same pattern as
+        slv_dim_adventure_works_sales__store_join_person, so gold needs no join.
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["dylan.ea"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # slv_dim_adventure_works_sales__sales_person_join_person
+
+            AdventureWorks salespeople over ADVENTURE_WORKS.SALES.SALES_PERSON, with their display name resolved from adw_core's slv_adventure_works_person__person. One row per salesperson (17). business_entity_id is the natural key -- no surrogate key is minted here, gold mints its own.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | BUSINESS_ENTITY_ID | PK. Natural key. PK of SALES.SALES_PERSON and FK to PERSON.BUSINESS_ENTITY. No surrogate key is minted here -- gold mints its own SALES_PERSON_KEY. |
+            | SALES_PERSON_FULL_NAME | Display name of the salesperson, from adw_core slv_adventure_works_person__person. Contains PII. |
+            | TERRITORY_ID | FK to the sales territory assigned to this salesperson. Nullable -- some sales managers have no assigned territory. |
+            | SALES_QUOTA | Sales quota assigned to this salesperson. Nullable -- 3 of 17 salespeople have no assigned quota. |
+            | BONUS | Bonus amount earned by this salesperson. |
+            | COMMISSION_PCT | Commission percentage rate for this salesperson. |
+            | SALES_YTD | Year-to-date sales total for this salesperson. |
+            | SALES_LAST_YEAR | Prior year sales total for this salesperson. |
+            | SALES_PERSON_MODIFIED_DATE | Last change to this salesperson in the source system. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: business_entity_id
+        description: >
+            Natural key. PK of SALES.SALES_PERSON and FK to PERSON.BUSINESS_ENTITY, the
+            universal identifier shared across the AdventureWorks party model. No surrogate
+            key is minted here -- gold mints its own sales_person_key.
+        data_tests:
+          - unique
+          - not_null
+
+      # --- identity ----------------------------------------------------------
+      - name: sales_person_full_name
+        description: "Display name of the salesperson, from adw_core slv_adventure_works_person__person. Contains PII."
+        config:
+          meta: { contains_pii: true }
+
+      # --- foreign keys ------------------------------------------------------------
+      - name: territory_id
+        description: "FK to the sales territory assigned to this salesperson. Nullable -- some sales managers have no assigned territory."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('slv_dim_adventure_works_sales__sales_territory')
+                field: territory_id
+
+      # --- performance ---------------------------------------------------------------
+      - name: sales_quota
+        description: "Sales quota assigned to this salesperson. NULL for 3 of 17 salespeople who have no assigned quota -- intentionally left NULL (not zero-filled) to avoid skewing quota-attainment calculations downstream in gold."
+
+      - name: bonus
+        description: "Bonus amount earned by this salesperson."
+        data_tests: [not_null]
+
+      - name: commission_pct
+        description: "Commission percentage rate for this salesperson."
+        data_tests: [not_null]
+
+      - name: sales_ytd
+        description: "Year-to-date sales total for this salesperson."
+        data_tests: [not_null]
+
+      - name: sales_last_year
+        description: "Prior year sales total for this salesperson."
+        data_tests: [not_null]
+
+      # --- audit ---------------------------------------------------------
+      - name: sales_person_modified_date
+        description: "Last change to this salesperson in the source system."

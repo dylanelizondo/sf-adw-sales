@@ -1,14 +1,21 @@
 version: 2
 
 models:
-  - name: gld_dim_orders
+  - name: gld_fct_order_header
     description: >
-        Gold dimension of AdventureWorks sales orders. One row per order (equal to
-        slv_dim_adventure_works_sales__sales_order_header_join_detail), reflecting only the
-        current state of each order. Straight select from the silver model, which already
-        joins the order header to its aggregated line metrics (line count, units, revenue)
-        straight from bronze. Gold adds nothing, not even a key: sales_order_id is the
-        natural key and is used as-is.
+        Gold fact of AdventureWorks sales orders, at order-header grain. One row per order
+        (equal to slv_dim_adventure_works_sales__sales_order_header_join_detail), reflecting
+        only the current state of each order. Straight select from the silver model, which
+        already joins the order header to its aggregated line metrics (line count, units,
+        revenue) straight from bronze. Gold adds nothing but the surrogate key: sales_order_id
+        is the natural key and is used as-is.
+
+        Star schema: FKs point only at conformed gold dimensions (dim_client, dim_territory,
+        dim_address, dim_sales_person, dim_credit_card). ship_method_id and currency_rate_id
+        are still degenerate dimensions -- no gold dimension exists for shipping method or
+        currency rate yet, so they stay as plain attributes rather than FKs. Was previously
+        (mis)modeled as gld_dim_orders; it carries additive measures (sub_total, total_due,
+        order_total_revenue, ...), which makes it a fact, not a dimension.
 
         Type 1: incrementally merged on sales_order_id, so a changed order overwrites its
         existing row in place and no history is kept. Incremental runs re-select only orders
@@ -26,9 +33,11 @@ models:
           termNames:
             - "Sales"
           readme: |
-            # dim_orders
+            # fct_order_header
 
-            Gold dimension of AdventureWorks sales orders. One row per order (equal to slv_dim_adventure_works_sales__sales_order_header_join_detail), reflecting only the current state of each order. Straight select from the silver model, which already joins the order header to its aggregated line metrics (line count, units, revenue) straight from bronze. Gold adds nothing, not even a key: sales_order_id is the natural key and is used as-is.
+            Gold fact of AdventureWorks sales orders, at order-header grain. One row per order (equal to slv_dim_adventure_works_sales__sales_order_header_join_detail), reflecting only the current state of each order. Straight select from the silver model, which already joins the order header to its aggregated line metrics (line count, units, revenue) straight from bronze. Gold adds nothing but the surrogate key: sales_order_id is the natural key and is used as-is.
+
+            Star schema: FKs point only at conformed gold dimensions (dim_client, dim_territory, dim_address, dim_sales_person, dim_credit_card). ship_method_id and currency_rate_id are still degenerate dimensions -- no gold dimension exists for shipping method or currency rate yet.
 
             Type 1: incrementally merged on sales_order_id, so a changed order overwrites its existing row in place and no history is kept. Incremental runs re-select only orders modified since the last run.
 
@@ -37,7 +46,8 @@ models:
 
             | Column | Description |
             | --- | --- |
-            | SALES_ORDER_ID | PK. Natural key, recovered from the corrupted bronze column in silver. |
+            | ORDER_KEY | PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over sales_order_id. |
+            | SALES_ORDER_ID | Natural key, recovered from the corrupted bronze column in silver. |
             | SALES_ORDER_NUMBER | Order number shown to the customer. |
             | PURCHASE_ORDER_NUMBER | Purchase order number the customer assigned. |
             | ACCOUNT_NUMBER | Accounting account number tied to the sale. |
@@ -50,14 +60,14 @@ models:
             | ORDER_STATUS_LABEL | Decoded status. |
             | IS_ONLINE_ORDER | True when placed online. |
             | ORDER_CHANNEL | Online or Salesperson. |
-            | CUSTOMER_ID | FK to the customer. |
-            | SALES_PERSON_ID | FK to the salesperson. Null for online orders. |
-            | TERRITORY_ID | FK to the sales territory. |
-            | BILL_TO_ADDRESS_ID | FK to the billing address. |
-            | SHIP_TO_ADDRESS_ID | FK to the shipping address. |
-            | SHIP_METHOD_ID | FK to the shipping method. |
-            | CREDIT_CARD_ID | FK to the credit card. |
-            | CURRENCY_RATE_ID | FK to the exchange rate. Null for local currency. |
+            | CUSTOMER_ID | FK to dim_client. |
+            | TERRITORY_ID | FK to dim_territory. |
+            | BILL_TO_ADDRESS_ID | FK to dim_address. |
+            | SHIP_TO_ADDRESS_ID | FK to dim_address. |
+            | SALES_PERSON_ID | FK to dim_sales_person. Null for online orders. |
+            | SHIP_METHOD_ID | Degenerate dimension. No gold dimension built for shipping methods yet. |
+            | CREDIT_CARD_ID | FK to dim_credit_card. Null when no card was used. |
+            | CURRENCY_RATE_ID | Degenerate dimension. Null for local currency. No gold dimension built for currency rates yet. |
             | SUB_TOTAL | Subtotal before tax and freight. |
             | TAX_AMT | Tax amount charged. |
             | FREIGHT | Freight cost charged. |
@@ -72,8 +82,14 @@ models:
     columns:
 
       # --- keys ------------------------------------------------------------
+      - name: order_key
+        description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over sales_order_id."
+        data_tests:
+          - unique
+          - not_null
+
       - name: sales_order_id
-        description: "PK. Natural key, recovered from the corrupted bronze column in silver. No surrogate/md5 key is minted."
+        description: "Natural key, recovered from the corrupted bronze column in silver. Merge key of the incremental model."
         data_tests:
           - unique
           - not_null
@@ -117,30 +133,61 @@ models:
       - name: order_channel
         description: "Sales channel, Online or Salesperson, decoded in silver."
 
-      # --- foreign keys ----------------------------------------------------------
+      # --- foreign keys to conformed dimensions -----------------------------------
       - name: customer_id
-        description: "FK to the customer the order belongs to."
-
-      - name: sales_person_id
-        description: "FK to the assigned salesperson. Null for online orders."
+        description: "FK to dim_client."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('gld_dim_client')
+                field: customer_id
 
       - name: territory_id
-        description: "FK to the sales territory."
+        description: "FK to dim_territory."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('gld_dim_territory')
+                field: territory_id
 
       - name: bill_to_address_id
-        description: "FK to the billing address."
+        description: "FK to dim_address."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('gld_dim_address')
+                field: address_id
 
       - name: ship_to_address_id
-        description: "FK to the shipping address."
+        description: "FK to dim_address."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('gld_dim_address')
+                field: address_id
 
-      - name: ship_method_id
-        description: "FK to the shipping method."
+      - name: sales_person_id
+        description: "FK to dim_sales_person. Null for online orders."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('gld_dim_sales_person')
+                field: business_entity_id
 
       - name: credit_card_id
-        description: "FK to the credit card. Null when no card was used."
+        description: "FK to dim_credit_card. Null when no card was used."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('gld_dim_credit_card')
+                field: credit_card_id
+
+      # --- degenerate dimensions (no gold dimension built for these yet) ----------
+      - name: ship_method_id
+        description: "Degenerate dimension. Shipping method's natural key, carried as a plain attribute since no gold dimension exists for shipping methods yet."
 
       - name: currency_rate_id
-        description: "FK to the exchange rate applied. Null for sales in local currency."
+        description: "Degenerate dimension. Exchange rate's natural key, carried as a plain attribute since no gold dimension exists for currency rates yet. Null for sales in local currency."
 
       # --- amounts -----------------------------------------------------------------
       - name: sub_total

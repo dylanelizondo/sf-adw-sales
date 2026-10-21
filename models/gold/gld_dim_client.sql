@@ -7,10 +7,17 @@
         'CLIENT_TYPE': ['UNKNOWN', 'UNKNOWN'],
         'STORE_ID': [-1, -2],
         'PERSON_ID': [none, none],
-        'TERRITORY_ID': [-1, -2],
     }) }}"
     )
 }}
+
+-- territory_id and primary_address_id are dropped on purpose -- they belong to the
+-- order (fact), not to the client. store_id is the one dimension-to-dimension FK this
+-- model carries: an outrigger to dim_store (not a flatten), accepted here because
+-- dim_store has its own Type 2 history that dim_client (Type 1) must not duplicate or
+-- freeze a point-in-time copy of. Store descriptive attributes live only in dim_store;
+-- join there via store_id for business type, specialty, annual sales, assigned
+-- salesperson, etc.
 
 select
     -- keys ----------------------------------------------------------------
@@ -32,11 +39,9 @@ select
     c.client_number_cars_owned,
     c.client_is_home_owner,
 
-    -- foreign keys ------------------------------------------------------------
+    -- outrigger / plain reference --------------------------------------------
     c.store_id,
     c.person_id,
-    c.territory_id,
-    c.primary_address_id,
 
     -- audit -------------------------------------------------------------------
     c.client_modified_date

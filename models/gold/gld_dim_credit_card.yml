@@ -1,0 +1,88 @@
+version: 2
+
+models:
+  - name: gld_dim_credit_card
+    description: >
+        Gold dimension of AdventureWorks credit cards. One row per card (equal to
+        slv_adventure_works_sales__credit_card) plus the 2 default rows (-1 Missing, -2 Not
+        Applicable) added by upsert_default_rows in the post_hook, so facts with no card on
+        file still join. credit_card_key is a surrogate key minted HERE with
+        dbt_utils.generate_surrogate_key; credit_card_id stays as the natural key. Straight
+        select from ONE silver model, no JOINs.
+
+        PII/PCI note: the raw PAN (card number) never reaches here -- silver already drops
+        it, exposing only card_last_four and a one-way SHA-2 hash. See
+        slv_adventure_works_sales__credit_card.yml for the open governance decision on
+        masking.
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["dylan.ea"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # dim_credit_card
+
+            Gold dimension of AdventureWorks credit cards. One row per card, plus 2 default rows (-1 Missing, -2 Not Applicable). credit_card_key is a surrogate key minted in gold with dbt_utils.generate_surrogate_key; credit_card_id stays as the natural key. Straight select from silver, no joins.
+
+            PII/PCI note: the raw PAN never reaches here -- silver exposes only card_last_four and a one-way hash.
+
+            **Layer:** gold
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | CREDIT_CARD_KEY | PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over credit_card_id. |
+            | CREDIT_CARD_ID | Natural key. Merge key of the incremental model. -1 and -2 are the default rows. |
+            | CARD_TYPE | Type/brand of the credit card. |
+            | CARD_LAST_FOUR | Last four digits of the card number, safe to expose for identification. |
+            | CARD_NUMBER_HASH | One-way SHA-2 hash of the full card number (PAN). PII/PCI column. |
+            | EXPIRY_DATE | Card expiration date. |
+            | CREDIT_CARD_MODIFIED_DATE | Last change to the card in the source system. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: credit_card_key
+        description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over credit_card_id."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: credit_card_id
+        description: "Natural key, credit_card_id of SALES.CREDIT_CARD. Merge key of the incremental model. -1 and -2 are the default rows."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- card ------------------------------------------------------------------
+      - name: card_type
+        description: "Type/brand of the credit card."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['SuperiorCard', 'Distinguish', 'ColonialVoice', 'Vista']
+                quote: true
+
+      - name: card_last_four
+        description: "Last four digits of the card number, safe to expose for identification purposes."
+
+      - name: card_number_hash
+        description: "One-way SHA-2 hash of the full card number (PAN). The raw PAN is never stored. PII/PCI column -- flagged for governance tagging."
+        config:
+          meta: { contains_pii: true }
+
+      - name: expiry_date
+        description: "Card expiration date."
+
+      # --- audit -------------------------------------------------------------------
+      - name: credit_card_modified_date
+        description: "Last change to the credit card in the source system."

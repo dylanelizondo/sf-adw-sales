@@ -1,0 +1,97 @@
+version: 2
+
+models:
+  - name: gld_dim_sales_person
+    description: >
+        Gold dimension of AdventureWorks salespeople. One row per salesperson (17, equal to
+        slv_adventure_works_sales__sales_person) plus the 2 default rows (-1 Missing, -2 Not
+        Applicable) added by upsert_default_rows in the post_hook, so facts with no assigned
+        salesperson (online orders) still join. sales_person_key is a surrogate key minted
+        HERE with dbt_utils.generate_surrogate_key; business_entity_id stays as the natural
+        key. Straight select from ONE silver model, no JOINs: the display name is already
+        resolved in silver.
+
+        Star schema: carries no FK to another gold dimension. territory_id is a plain
+        descriptive attribute (which territory this salesperson is assigned to), not a
+        relationship -- facts join dim_territory directly rather than through this dimension.
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["dylan.ea"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # dim_sales_person
+
+            Gold dimension of AdventureWorks salespeople. One row per salesperson (17), plus 2 default rows (-1 Missing, -2 Not Applicable). sales_person_key is a surrogate key minted in gold with dbt_utils.generate_surrogate_key; business_entity_id stays as the natural key. Straight select from silver, no joins -- the display name is already resolved there.
+
+            Star schema: territory_id is a plain descriptive attribute, not a relationship to dim_territory.
+
+            **Layer:** gold
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | SALES_PERSON_KEY | PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over business_entity_id. |
+            | BUSINESS_ENTITY_ID | Natural key, business_entity_id of SALES.SALES_PERSON. Merge key of the incremental model. -1 and -2 are the default rows. |
+            | SALES_PERSON_FULL_NAME | Display name of the salesperson. Contains PII. |
+            | TERRITORY_ID | Territory this salesperson is assigned to. Plain attribute, not a relationship -- join dim_territory directly from the fact instead. Nullable -- some sales managers have no assigned territory. |
+            | SALES_QUOTA | Sales quota assigned to this salesperson. Nullable -- 3 of 17 salespeople have no assigned quota. |
+            | BONUS | Bonus amount earned by this salesperson. |
+            | COMMISSION_PCT | Commission percentage rate for this salesperson. |
+            | SALES_YTD | Year-to-date sales total for this salesperson. |
+            | SALES_LAST_YEAR | Prior year sales total for this salesperson. |
+            | SALES_PERSON_MODIFIED_DATE | Last change to this salesperson in the source system. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: sales_person_key
+        description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over business_entity_id."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: business_entity_id
+        description: "Natural key, business_entity_id of SALES.SALES_PERSON. Merge key of the incremental model. -1 and -2 are the default rows."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- identity ----------------------------------------------------------
+      - name: sales_person_full_name
+        description: "Display name of the salesperson. Contains PII."
+        config:
+          meta: { contains_pii: true }
+
+      # --- territory (plain attribute, not a relationship) --------------------------
+      - name: territory_id
+        description: "Territory this salesperson is assigned to. Plain attribute, not a relationship: facts join dim_territory directly rather than through this dimension. Nullable -- some sales managers have no assigned territory."
+
+      # --- performance ---------------------------------------------------------------
+      - name: sales_quota
+        description: "Sales quota assigned to this salesperson. NULL for salespeople with no assigned quota -- intentionally left NULL, not zero-filled, to avoid skewing quota-attainment calculations."
+
+      - name: bonus
+        description: "Bonus amount earned by this salesperson."
+
+      - name: commission_pct
+        description: "Commission percentage rate for this salesperson."
+
+      - name: sales_ytd
+        description: "Year-to-date sales total for this salesperson."
+
+      - name: sales_last_year
+        description: "Prior year sales total for this salesperson."
+
+      # --- audit -------------------------------------------------------------------
+      - name: sales_person_modified_date
+        description: "Last change to this salesperson in the source system."

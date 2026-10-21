@@ -9,8 +9,7 @@ from {{ ref('gld_dim_client') }}
 where client_type != 'INDIVIDUAL'
   and customer_id not in (-1, -2)
   and (
-         primary_address_id is not null
-      or client_has_demographics_survey is not null
+         client_has_demographics_survey is not null
       or client_age_band is not null
       or client_education is not null
       or client_occupation is not null
