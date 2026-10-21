@@ -4,7 +4,14 @@ models:
   - name: gld_dim_client
     description: >
         Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to
-        slv_adventure_works_sales__customer). client_key is an auto-incrementing surrogate
+        slv_adventure_works_sales__customer) plus the 2 default rows (-1 Missing, -2 Not
+        Applicable) added by upsert_default_rows in the post_hook, so facts with an unknown
+        client still join. On those two rows client_type is UNKNOWN, store_id/territory_id
+        are -1/-2 (resolving against dim_store/dim_territory's own default rows), person_id
+        and primary_address_id are null (no gold person model and no default row to join
+        to), and every other column -- including the personal-attribute columns -- carries
+        upsert_default_rows' generic by-type default rather than a null.
+        client_key is an auto-incrementing surrogate
         key minted HERE, since silver carries no key of its own. Adds the
         client's display name: the store name for reseller stores and the person's full name for
         individual customers. Individual clients also carry a few non-sensitive self-reported
@@ -49,8 +56,8 @@ models:
             | CLIENT_IS_HOME_OWNER | Home ownership. Self-reported. |
             | STORE_ID | FK to dim_store (business_entity_id). Set when the client is a reseller store, null for individuals. |
             | PERSON_ID | FK to the person behind an individual customer (business_entity_id in adw_core's slv_adventure_works_person__person). Null for store-only customers. |
-            | TERRITORY_ID | FK to the sales territory the client belongs to. Will join to dim_territory once #26 is built. |
-            | PRIMARY_ADDRESS_ID | FK to the client's winning address, taken from slv_adventure_works_person__person. Will join to dim_address once #27 is built. Individual clients only; null for stores and for people with no address. |
+            | TERRITORY_ID | FK to dim_territory. |
+            | PRIMARY_ADDRESS_ID | FK to dim_address, taken from slv_adventure_works_person__person. Individual clients only; null for stores and for people with no address. |
             | CLIENT_MODIFIED_DATE | Last change to the customer record in the source system. |
 
             _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
@@ -112,15 +119,15 @@ models:
 
       # --- foreign keys ------------------------------------------------------------
       - name: store_id
-        description: "FK to dim_store (business_entity_id). Set when the client is a reseller store, null for individuals."
+        description: "FK to dim_store (business_entity_id). Set when the client is a reseller store, null for individuals. -1 and -2 on the two default rows resolve against dim_store's own default rows."
         data_tests:
           - relationships:
               arguments:
-                to: ref('slv_dim_adventure_works_sales__store_join_person')
+                to: ref('gld_dim_store')
                 field: store_id
 
       - name: person_id
-        description: "FK to the person behind an individual customer (business_entity_id in adw_core's slv_adventure_works_person__person). Null for store-only customers."
+        description: "FK to the person behind an individual customer (business_entity_id in adw_core's slv_adventure_works_person__person). Null for store-only customers, and on the two default rows -- adw_core's person model carries no -1/-2 default of its own."
         data_tests:
           - relationships:
               arguments:
@@ -128,15 +135,15 @@ models:
                 field: business_entity_id
 
       - name: territory_id
-        description: "FK to the sales territory the client belongs to. Will join to dim_territory once #26 is built."
+        description: "FK to dim_territory (territory_id). -1 and -2 on the two default rows resolve against dim_territory's own default rows."
         data_tests:
           - relationships:
               arguments:
-                to: ref('slv_dim_adventure_works_sales__sales_territory')
+                to: ref('gld_dim_territory')
                 field: territory_id
 
       - name: primary_address_id
-        description: "FK to the client's winning address, taken from slv_adventure_works_person__person. Will join to dim_address once #27 is built. Individual clients only; null for stores and for people with no address."
+        description: "FK to dim_address (address_id), taken from slv_adventure_works_person__person. Individual clients only; null for stores, for people with no address, and on the two default rows."
 
       # --- audit -------------------------------------------------------------
       - name: client_modified_date

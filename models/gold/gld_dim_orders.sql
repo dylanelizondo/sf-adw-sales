@@ -3,7 +3,8 @@
         materialized='incremental',
         unique_key='sales_order_id',
         incremental_strategy='merge',
-        alias='dim_orders'
+        alias='dim_orders',
+        post_hook="{{ upsert_default_rows('sales_order_id') }}"
     )
 }}
 

@@ -1,22 +1,24 @@
 snapshots:
-  - name: gld_dim_store_snapshot
+  - name: gld_dim_store
     relation: ref("slv_dim_adventure_works_sales__store_join_person")
     description: >
         Type 2 history of slv_dim_adventure_works_sales__store_join_person. One row per
         store per version: a new row opens whenever any store attribute changes
         (check_cols: all), keyed on store_id and dated off store_modified_date. A store
         removed from the source closes out its current row rather than being deleted
-        (hard_deletes: invalidate). gld_dim_store reads only the current row per store
-        from here (dbt_valid_to is null); query this snapshot directly for history.
+        (hard_deletes: invalidate). A post_hook (upsert_default_rows) adds two default
+        rows, store_id -1 (Missing) and -2 (Not Applicable), so facts with an unknown
+        store still join; those rows are not versioned by the snapshot strategy.
     config:
       database: "{{ env_var('DBT_DB_ADW_GOLD') }}"
-      schema: sales_snapshot
-      alias: dim_store_snapshot
+      schema: sales
+      alias: dim_store
       strategy: timestamp
       unique_key: store_id
       check_cols: all
       updated_at: store_modified_date
       hard_deletes: invalidate
+      post_hook: "{{ upsert_default_rows('store_id') }}"
 
       persist_docs:
        relation: true

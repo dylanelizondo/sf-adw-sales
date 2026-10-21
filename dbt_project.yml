@@ -77,7 +77,7 @@ models:
       +database: "{{ env_var('DBT_DB_ADW_PLATINUM') }}"
       +schema: SALES
       +materialized: view
-      +tags: ["gold"]
+      +tags: ["platinum"]
       +group: sales_adventure_works
 
 vars:

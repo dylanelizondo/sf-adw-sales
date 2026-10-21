@@ -4,5 +4,6 @@
 select
     customer_id,
     client_type
-from {{ ref('gld_dim_client') }}
+from ADW_GOLD_DEV.DYLAN_ELIZONDO.DIM_CLIENT
 where client_name = 'Unknown'
+and customer_id not in (-1, -2)
