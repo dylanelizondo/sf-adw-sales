@@ -4,7 +4,7 @@
     unique_key='customer_id',
     incremental_strategy='merge',
     post_hook="{{ upsert_default_rows('customer_id', {
-        'CLIENT_TYPE': ['Missing', 'N/A'],
+        'CLIENT_TYPE': ['UNKNOWN', 'UNKNOWN'],
         'STORE_ID': [-1, -2],
         'PERSON_ID': [none, none],
         'TERRITORY_ID': [-1, -2],
