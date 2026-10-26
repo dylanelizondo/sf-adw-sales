@@ -3,11 +3,16 @@ snapshots:
     relation: ref("slv_dim_adventure_works_sales__store_join_person")
     description: >
         Type 2 history of slv_dim_adventure_works_sales__store_join_person. One row per
-        store per version: a new row opens whenever any store attribute changes
-        (check_cols: all), keyed on store_id and dated off store_modified_date. A store
-        removed from the source closes out its current row rather than being deleted
-        (hard_deletes: invalidate). A post_hook (upsert_default_rows) adds two default
-        rows, store_id -1 (Missing) and -2 (Not Applicable), so facts with an unknown
+        store per version, keyed on store_id. Versioning rule (strategy: timestamp,
+        updated_at: store_modified_date): dbt opens a new version only when a store's
+        store_modified_date moves forward past the current version's store_valid_from. The
+        timestamp strategy does not read check_cols, so a change to the assigned salesperson
+        (sales_person_id) that does not also change store_modified_date in the source does
+        NOT open a new version. Decision D-B (whether to also version on salesperson change,
+        with strategy: check and check_cols: [sales_person_id]) is open and belongs to the
+        project lead. A store removed from the source closes out its current row rather than
+        being deleted (hard_deletes: invalidate). A post_hook (upsert_default_rows) adds two
+        default rows, store_id -1 (Missing) and -2 (Not Applicable), so facts with an unknown
         store still join; those rows are not versioned by the snapshot strategy.
     config:
       database: "{{ env_var('DBT_DB_ADW_GOLD') }}"
@@ -15,7 +20,6 @@ snapshots:
       alias: dim_store
       strategy: timestamp
       unique_key: store_id
-      check_cols: all
       updated_at: store_modified_date
       hard_deletes: invalidate
       post_hook: "{{ upsert_default_rows('store_id') }}"
@@ -101,7 +105,7 @@ snapshots:
 
       # --- audit -----------------------------------------------------------------
       - name: store_modified_date
-        description: "Last change to the store in the source system. Drives the timestamp strategy's updated_at."
+        description: "Last change to the store in the source system. Drives the timestamp strategy's updated_at: this is the only column that opens a new version."
 
       # --- dbt snapshot metadata --------------------------------------------
       - name: store_key
@@ -115,7 +119,7 @@ snapshots:
         data_tests: [not_null]
 
       - name: store_valid_from
-        description: "Timestamp this version became current."
+        description: "Timestamp this version became current: the store_modified_date the source reported for this version, not the date the snapshot ran. The fact picks the version whose store_valid_from (compared by date) is on or before the order date."
         data_tests: [not_null]
 
       - name: store_valid_to
