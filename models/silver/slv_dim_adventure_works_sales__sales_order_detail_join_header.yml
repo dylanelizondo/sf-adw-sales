@@ -1,0 +1,124 @@
+version: 2
+
+models:
+  - name: slv_dim_adventure_works_sales__sales_order_detail_join_header
+    description: >
+        One row per sales order line, with the order header and the customer's store
+        already joined in, so gold can build the order-items fact with a straight select.
+        Grain: sales_order_detail_id. Built from slv_adventure_works_sales__sales_order_detail
+        (left join) slv_adventure_works_sales__sales_order_header (left join)
+        slv_adventure_works_sales__customer. Left joins mean a line never disappears, even if
+        its header is missing; in that case the header columns are null. Keys are inherited
+        from the silver tables, not minted here. order_item_modified_date is the incremental
+        watermark of gld_fct_order_items. Order-level totals (sub_total, tax_amt, freight,
+        total_due) are NOT included: they would repeat on every line and a SUM would multiply them.
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: sales_order_detail_key
+        description: "Surrogate key of the order line. Inherited from slv_adventure_works_sales__sales_order_detail, not recalculated."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: sales_order_detail_id
+        description: "Natural key of the order line. Grain of this model."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: sales_order_id
+        description: "Sales order the line belongs to."
+        data_tests: [not_null]
+
+      # --- order identifiers (from header) ---------------------------------
+      - name: sales_order_number
+        description: "Human-readable order number, from the header."
+
+      - name: purchase_order_number
+        description: "Customer purchase order number, from the header."
+
+      - name: account_number
+        description: "Account number from the order header."
+
+      - name: revision_number
+        description: "Revision number of the order."
+
+      # --- dates -----------------------------------------------------------
+      - name: order_date
+        description: "Date the order was placed."
+        data_tests: [not_null]
+
+      - name: due_date
+        description: "Date the order is due."
+
+      - name: ship_date
+        description: "Date the order shipped. Null if not yet shipped."
+
+      - name: is_shipped
+        description: "True if the order has a ship date."
+
+      # --- status and channel ----------------------------------------------
+      - name: order_status_code
+        description: "Source status code of the order: 1 to 6."
+
+      - name: order_status_label
+        description: "Decoded status: In process, Approved, Backordered, Rejected, Shipped or Cancelled."
+
+      - name: is_online_order
+        description: "True for online orders, false for salesperson orders."
+
+      - name: order_channel
+        description: "Online or Salesperson."
+
+      # --- foreign keys ----------------------------------------------------
+      - name: customer_id
+        description: "Customer who placed the order."
+        data_tests: [not_null]
+
+      - name: sales_person_id
+        description: "Salesperson who processed the order. Null for online orders."
+
+      - name: territory_id
+        description: "Sales territory of the order."
+
+      - name: bill_to_address_id
+        description: "Billing address of the order."
+
+      - name: ship_to_address_id
+        description: "Shipping address of the order."
+
+      - name: credit_card_id
+        description: "Credit card used. Null if none."
+
+      - name: store_id
+        description: "Store of the customer, from slv_adventure_works_sales__customer. Null for individual customers."
+
+      # --- degenerate (no dimension yet) -----------------------------------
+      - name: special_offer_id
+        description: "Special offer applied to the line. Degenerate column: no dimension yet."
+
+      - name: ship_method_id
+        description: "Shipping method. Degenerate column: no dimension yet."
+
+      - name: currency_rate_id
+        description: "Currency rate used. Degenerate column: no dimension yet."
+
+      # --- line measures ---------------------------------------------------
+      - name: order_qty
+        description: "Units in the line."
+
+      - name: unit_price
+        description: "Price per unit."
+
+      - name: unit_price_discount
+        description: "Discount per unit."
+
+      - name: line_total
+        description: "Line amount as delivered by the source. Not recomputed here."
+
+      # --- audit -----------------------------------------------------------
+      - name: order_item_modified_date
+        description: "Latest modification of the line or its header. Incremental watermark of gld_fct_order_items. Falls back to the line date when the header is missing."
+        data_tests: [not_null]
