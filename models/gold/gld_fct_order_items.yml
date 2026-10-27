@@ -1,0 +1,150 @@
+version: 2
+
+models:
+  - name: gld_fct_order_items
+    description: >
+      Fact de líneas de orden de venta (una fila por sales_order_detail_id).
+      Grano: una línea de orden. Las medidas están en moneda de la orden.
+      Las llaves de dimensión apuntan a filas por defecto cuando no hay dato:
+      'Missing' (dato esperado que falta) y 'Not Applicable' (no aplica).
+      Los hechos no tienen filas por defecto.
+
+    columns:
+      - name: order_items_key
+        description: Llave surrogate de la línea de orden.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: sales_order_detail_id
+        description: ID natural de la línea de orden (SalesOrderDetailID).
+        data_tests:
+          - unique
+          - not_null
+
+      - name: sales_order_id
+        description: ID de la orden de venta (degenerada).
+
+      - name: sales_order_number
+        description: Número de la orden de venta (degenerada).
+
+      - name: purchase_order_number
+        description: Número de orden de compra del cliente (degenerada).
+
+      - name: account_number
+        description: Número de cuenta de la orden (degenerada).
+
+      - name: revision_number
+        description: Número de revisión de la orden.
+
+      - name: order_date
+        description: Fecha de la orden.
+        data_tests:
+          - relationships:
+              to: ref('adw_core', 'gld_dim_date')
+              field: date_key
+
+      - name: due_date
+        description: Fecha de vencimiento de la orden.
+        data_tests:
+          - relationships:
+              to: ref('adw_core', 'gld_dim_date')
+              field: date_key
+
+      - name: ship_date
+        description: Fecha de envío. Puede ser nula si la orden no se ha enviado; las nulas no se validan.
+        data_tests:
+          - relationships:
+              to: ref('adw_core', 'gld_dim_date')
+              field: date_key
+
+      - name: is_shipped
+        description: Indica si la orden ya fue enviada.
+
+      - name: order_status_code
+        description: Código de estado de la orden.
+
+      - name: order_status_label
+        description: Descripción del estado de la orden.
+
+      - name: is_online_order
+        description: Indica si la venta fue en línea.
+
+      - name: order_channel
+        description: Canal de la orden (online o por tienda).
+
+      - name: customer_key
+        description: Llave del cliente. Apunta a gld_dim_client.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('gld_dim_client')
+              field: client_key
+
+      - name: territory_key
+        description: Llave del territorio de venta. Apunta a gld_dim_territory.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('gld_dim_territory')
+              field: territory_key
+
+      - name: bill_to_address_key
+        description: Llave de la dirección de facturación. Apunta a gld_dim_address.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('gld_dim_address')
+              field: address_key
+
+      - name: ship_to_address_key
+        description: Llave de la dirección de envío. Apunta a gld_dim_address.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('gld_dim_address')
+              field: address_key
+
+      - name: sales_person_key
+        description: Llave del vendedor. Apunta a gld_dim_sales_person. 'Not Applicable' si la venta no tuvo vendedor.
+        data_tests:
+          - not_null
+        # relationships a gld_dim_sales_person: agregar cuando B esté terminado
+
+      - name: credit_card_key
+        description: Llave de la tarjeta de crédito. Apunta a gld_dim_credit_card. 'Not Applicable' si no se pagó con tarjeta.
+        data_tests:
+          - not_null
+        # relationships a gld_dim_credit_card: agregar cuando A esté terminado
+
+      - name: store_key
+        description: Llave de la versión de la tienda vigente en la fecha de la orden (snapshot). 'Not Applicable' si el cliente no tiene tienda, 'Missing' si no se encontró versión.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('gld_dim_store')
+              field: store_key
+
+      - name: special_offer_id
+        description: ID de la oferta especial aplicada (degenerada).
+
+      - name: ship_method_id
+        description: ID del método de envío (degenerada).
+
+      - name: currency_rate_id
+        description: ID de la tasa de cambio (degenerada).
+
+      - name: order_qty
+        description: Cantidad de unidades de la línea.
+
+      - name: unit_price
+        description: Precio unitario de la línea.
+
+      - name: unit_price_discount
+        description: Descuento unitario aplicado.
+
+      - name: line_total
+        description: Total de la línea (precio neto por cantidad).
+
+      - name: order_item_modified_date
+        description: Fecha de última modificación de la línea. Se usa para la carga incremental.
