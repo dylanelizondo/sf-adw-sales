@@ -7,7 +7,6 @@
         'CLIENT_TYPE': ['UNKNOWN', 'UNKNOWN'],
         'STORE_ID': [-1, -2],
         'PERSON_ID': [none, none],
-        'TERRITORY_ID': [-1, -2],
     }) }}"
     )
 }}
@@ -35,8 +34,6 @@ select
     -- foreign keys ------------------------------------------------------------
     c.store_id,
     c.person_id,
-    c.territory_id,
-    c.primary_address_id,
 
     -- audit -------------------------------------------------------------------
     c.client_modified_date
