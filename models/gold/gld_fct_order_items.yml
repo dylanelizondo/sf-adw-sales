@@ -41,22 +41,25 @@ models:
         description: Fecha de la orden.
         data_tests:
           - relationships:
-              to: ref('adw_core', 'gld_dim_date')
-              field: date_key
+              arguments:
+                to: ref('adw_core', 'gld_dim_date')
+                field: date_key
 
       - name: due_date
         description: Fecha de vencimiento de la orden.
         data_tests:
           - relationships:
-              to: ref('adw_core', 'gld_dim_date')
-              field: date_key
+              arguments:
+                to: ref('adw_core', 'gld_dim_date')
+                field: date_key
 
       - name: ship_date
         description: Fecha de envío. Puede ser nula si la orden no se ha enviado; las nulas no se validan.
         data_tests:
           - relationships:
-              to: ref('adw_core', 'gld_dim_date')
-              field: date_key
+              arguments:
+                to: ref('adw_core', 'gld_dim_date')
+                field: date_key
 
       - name: is_shipped
         description: Indica si la orden ya fue enviada.
@@ -78,32 +81,36 @@ models:
         data_tests:
           - not_null
           - relationships:
-              to: ref('gld_dim_client')
-              field: client_key
+              arguments:
+                to: ref('gld_dim_client')
+                field: client_key
 
       - name: territory_key
         description: Llave del territorio de venta. Apunta a gld_dim_territory.
         data_tests:
           - not_null
           - relationships:
-              to: ref('gld_dim_territory')
-              field: territory_key
+              arguments:
+                to: ref('gld_dim_territory')
+                field: territory_key
 
       - name: bill_to_address_key
         description: Llave de la dirección de facturación. Apunta a gld_dim_address.
         data_tests:
           - not_null
           - relationships:
-              to: ref('gld_dim_address')
-              field: address_key
+              arguments:
+                to: ref('gld_dim_address')
+                field: address_key
 
       - name: ship_to_address_key
         description: Llave de la dirección de envío. Apunta a gld_dim_address.
         data_tests:
           - not_null
           - relationships:
-              to: ref('gld_dim_address')
-              field: address_key
+              arguments:
+                to: ref('gld_dim_address')
+                field: address_key
 
       - name: sales_person_key
         description: Llave del vendedor. Apunta a gld_dim_sales_person. 'Not Applicable' si la venta no tuvo vendedor.
@@ -122,8 +129,9 @@ models:
         data_tests:
           - not_null
           - relationships:
-              to: ref('gld_dim_store')
-              field: store_key
+              arguments:
+                to: ref('gld_dim_store')
+                field: store_key
 
       - name: special_offer_id
         description: ID de la oferta especial aplicada (degenerada).
