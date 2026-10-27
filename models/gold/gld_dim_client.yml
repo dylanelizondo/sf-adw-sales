@@ -6,19 +6,22 @@ models:
         Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to
         slv_adventure_works_sales__customer) plus the 2 default rows (-1 Missing, -2 Not
         Applicable) added by upsert_default_rows in the post_hook, so facts with an unknown
-        client still join. On those two rows client_type is UNKNOWN, store_id/territory_id
-        are -1/-2 (resolving against dim_store/dim_territory's own default rows), person_id
-        and primary_address_id are null (no gold person model and no default row to join
-        to), and every other column -- including the personal-attribute columns -- carries
-        upsert_default_rows' generic by-type default rather than a null.
-        client_key is an auto-incrementing surrogate
-        key minted HERE, since silver carries no key of its own. Adds the
+        client still join. On those two rows client_type is UNKNOWN, store_id is -1/-2
+        (resolving against dim_store's own default rows), person_id is null (no gold person
+        model and no default row to join to), and every other column -- including the
+        personal-attribute columns -- carries upsert_default_rows' generic by-type default
+        rather than a null.
+        client_key is a surrogate key minted HERE with dbt_utils.generate_surrogate_key over
+        customer_id, since silver carries no key of its own. Adds the
         client's display name: the store name for reseller stores and the person's full name for
         individual customers. Individual clients also carry a few non-sensitive self-reported
         attributes from adw_core's slv_adventure_works_person__person (age band, education, occupation, children, cars,
         home ownership); stores never do. Email, phone and the sensitive survey answers (gender,
-        marital status, income band) are deliberately left out. Join dim_orders on customer_id and
-        dim_store on store_id; store details live in dim_store.
+        marital status, income band) are deliberately left out.
+        Territory and addresses are NOT carried here: the territory and the bill-to and ship-to
+        addresses belong to the order, not to the client, so they travel on the fact
+        (territory_key, bill_to_address_key, ship_to_address_key). The fact gld_fct_order_items
+        joins on customer_key = client_key; dim_store joins on store_id and holds the store details.
 
     config:
       meta:
@@ -34,18 +37,18 @@ models:
           readme: |
             # dim_client
 
-            Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to slv_adventure_works_sales__customer). client_key is an auto-incrementing surrogate key minted here, since silver carries no key of its own. Adds the client's display name: the store name for reseller stores and the person's full name for individual customers. Individual clients also carry a few non-sensitive self-reported attributes from adw_core's slv_adventure_works_person__person (age band, education, occupation, children, cars, home ownership); stores never do. Email, phone and the sensitive survey answers (gender, marital status, income band) are deliberately left out. Join dim_orders on customer_id and dim_store on store_id; store details live in dim_store.
+            Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to slv_adventure_works_sales__customer). client_key is a surrogate key minted here with dbt_utils.generate_surrogate_key over customer_id, since silver carries no key of its own. Adds the client's display name: the store name for reseller stores and the person's full name for individual customers. Individual clients also carry a few non-sensitive self-reported attributes from adw_core's slv_adventure_works_person__person (age band, education, occupation, children, cars, home ownership); stores never do. Email, phone and the sensitive survey answers (gender, marital status, income band) are deliberately left out. Territory and addresses are not carried here: they belong to the order and travel on the fact (territory_key, bill_to_address_key, ship_to_address_key). The fact gld_fct_order_items joins on customer_key = client_key; dim_store joins on store_id and holds the store details.
 
             **Layer:** gold
             **Subject area:** Sales
 
             | Column | Description |
             | --- | --- |
-            | CLIENT_KEY | PK. Auto-incrementing surrogate key minted here (silver carries no key of its own). |
-            | CUSTOMER_ID | Natural key. Unique identifier of the customer in the source system; the column dim_orders joins on. |
+            | CLIENT_KEY | PK. Surrogate key minted here with dbt_utils.generate_surrogate_key over customer_id (silver carries no key of its own). The fact recomputes the same hash from customer_id. |
+            | CUSTOMER_ID | Natural key. Unique identifier of the customer in the source system; merge key of the incremental model. |
             | CLIENT_TYPE | Client classification from silver. INDIVIDUAL when only a person is set, STORE when a store is set (a store wins over a person for the 635 ambiguous rows), UNKNOWN when neither is set. |
             | CLIENT_NAME | Display name: the store name for STORE clients, the person's full name for INDIVIDUAL clients, 'Unknown' when neither is available (the dim_client__every_client_has_a_name test fails if that happens). Contains personal names for individuals. |
-            | CLIENT_ACCOUNT_NUMBER | Customer account number, derived in the source system. Surfaced as-is; issue #34 flags it as ambiguous, so do not use it as a key. Not the order account number carried by dim_orders. |
+            | CLIENT_ACCOUNT_NUMBER | Customer account number, derived in the source system. Surfaced as-is; issue #34 flags it as ambiguous, so do not use it as a key. Not the order account number carried by gld_fct_order_items. |
             | CLIENT_HAS_DEMOGRAPHICS_SURVEY | True when the individual's survey holds real answers rather than an empty form. Null for stores. |
             | CLIENT_AGE_BAND | Banded age derived from the survey birth date; the raw birth date is not exposed. Self-reported. Individuals with a survey only. |
             | CLIENT_EDUCATION | Highest education band reached, from Partial High School to Graduate Degree. Self-reported. |
@@ -56,8 +59,6 @@ models:
             | CLIENT_IS_HOME_OWNER | Home ownership. Self-reported. |
             | STORE_ID | FK to dim_store (business_entity_id). Set when the client is a reseller store, null for individuals. |
             | PERSON_ID | FK to the person behind an individual customer (business_entity_id in adw_core's slv_adventure_works_person__person). Null for store-only customers. |
-            | TERRITORY_ID | FK to dim_territory. |
-            | PRIMARY_ADDRESS_ID | FK to dim_address, taken from slv_adventure_works_person__person. Individual clients only; null for stores and for people with no address. |
             | CLIENT_MODIFIED_DATE | Last change to the customer record in the source system. |
 
             _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
@@ -66,13 +67,13 @@ models:
 
       # --- keys ------------------------------------------------------------
       - name: client_key
-        description: "PK. Auto-incrementing surrogate key minted here (silver carries no key of its own)."
+        description: "PK. Surrogate key minted here with dbt_utils.generate_surrogate_key over customer_id (silver carries no key of its own). The fact recomputes the same hash from customer_id."
         data_tests:
           - unique
           - not_null
 
       - name: customer_id
-        description: "Natural key. Unique identifier of the customer in the source system; the column dim_orders joins on."
+        description: "Natural key. Unique identifier of the customer in the source system; merge key of the incremental model."
         data_tests:
           - unique
           - not_null
@@ -90,7 +91,7 @@ models:
         description: "Display name: the store name for STORE clients, the person's full name for INDIVIDUAL clients, 'Unknown' when neither is available (the dim_client__every_client_has_a_name test fails if that happens). Contains personal names for individuals."
 
       - name: client_account_number
-        description: "Customer account number, derived in the source system. Surfaced as-is; issue #34 flags it as ambiguous, so do not use it as a key. Not the order account number carried by dim_orders."
+        description: "Customer account number, derived in the source system. Surfaced as-is; issue #34 flags it as ambiguous, so do not use it as a key. Not the order account number carried by gld_fct_order_items."
 
       # --- individual clients only (null for stores) ---------------------------------
       - name: client_has_demographics_survey
@@ -133,17 +134,6 @@ models:
               arguments:
                 to: ref('adw_core', 'slv_adventure_works_person__person')
                 field: business_entity_id
-
-      - name: territory_id
-        description: "FK to dim_territory (territory_id). -1 and -2 on the two default rows resolve against dim_territory's own default rows."
-        data_tests:
-          - relationships:
-              arguments:
-                to: ref('gld_dim_territory')
-                field: territory_id
-
-      - name: primary_address_id
-        description: "FK to dim_address (address_id), taken from slv_adventure_works_person__person. Individual clients only; null for stores, for people with no address, and on the two default rows."
 
       # --- audit -------------------------------------------------------------
       - name: client_modified_date
