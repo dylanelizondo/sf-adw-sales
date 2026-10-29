@@ -2,8 +2,9 @@
 -- ONE row per (sales order, sales reason). Grain matches the source composite PK.
 --
 -- Bridge between sales orders and the reasons recorded for the purchase; an order can carry
--- several reasons. Cleaned and typed only: the corrupted order key is recovered, the reason
--- key and date are cast. No business logic; that belongs in gold.
+-- several reasons. Cleaned and typed only: the corrupted order key is recovered and the
+-- reason key is cast. modified_date is already TIMESTAMP_NTZ in bronze and is kept as is.
+-- No business logic; that belongs in gold.
 --
 -- Uniqueness of the pair is enforced by unique_combination_of_columns in the YAML, and the row
 -- count must equal bronze (tests/silver/..._row_count_matches_source.sql).
@@ -20,7 +21,7 @@ select
     try_to_number(trim(sales_reason_id::varchar))::number(38,0)          as sales_reason_id,
 
     -- audit -----------------------------------------------------------------
-    {{ to_silver_date('modified_date') }}                                as modified_date,
+    modified_date                                                        as modified_date,
     -- sysdate() is UTC TIMESTAMP_NTZ; current_timestamp() would be TIMESTAMP_LTZ.
     sysdate()                                                            as _loaded_at,
     '{{ ref("adw_core", "brz_adventure_works_sales__sales_order_header_sales_reason") }}'::varchar as _source_relation
