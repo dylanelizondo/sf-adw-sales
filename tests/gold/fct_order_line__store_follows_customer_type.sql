@@ -4,7 +4,7 @@
 --       (fila por defecto, de otra tienda o inexistente).
 with fact as (
     select sales_order_detail_id, store_key
-    from {{ ref('gld_fct_order_items') }}
+    from {{ ref('gld_fct_order_line') }}
 ),
 
 silver as (

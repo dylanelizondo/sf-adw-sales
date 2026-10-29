@@ -3,7 +3,7 @@
 select
     f.sales_order_detail_id,
     f.customer_key
-from {{ ref('gld_fct_order_items') }} as f
+from {{ ref('gld_fct_order_line') }} as f
 left join {{ ref('gld_dim_client') }} as c
     on c.client_key = f.customer_key
 where c.client_key is null

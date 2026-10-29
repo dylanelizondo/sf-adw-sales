@@ -1,6 +1,6 @@
 {{ config(
     materialized='incremental',
-    alias='fct_order_items',
+    alias='fct_order_line',
     unique_key='sales_order_detail_id',
     incremental_strategy='merge'
 ) }}

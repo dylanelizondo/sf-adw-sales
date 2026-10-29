@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: gld_fct_order_items
+  - name: gld_fct_order_line
     description: >
       Fact de líneas de orden de venta (una fila por sales_order_detail_id).
       Grano: una línea de orden. Las medidas están en moneda de la orden.
