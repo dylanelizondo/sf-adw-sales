@@ -2,9 +2,13 @@
 -- ONE row per sales order. Grain matches the source PK (sales_order_id).
 --
 -- Header of sales orders. Cleaned and typed only: the corrupted order key is recovered,
--- dates and amounts are cast, status and channel codes are decoded next to the original
--- codes. COMMENT is dropped because it is 100% NULL in the source. No business logic;
--- that belongs in gold.
+-- amounts are cast, status and channel codes are decoded next to the original codes.
+-- COMMENT is dropped because it is 100% NULL in the source. No business logic; that
+-- belongs in gold.
+--
+-- Dates are NOT converted here. order_date, due_date and ship_date are already DATE in
+-- bronze, and modified_date is TIMESTAMP_NTZ and is kept as a timestamp, because it is
+-- the incremental watermark downstream.
 --
 -- The row count must equal bronze (tests/silver/..._row_count_matches_source.sql): a
 -- wrong key recovery would drop rows, and that test is what makes it loud.
@@ -17,9 +21,9 @@ select
     revision_number::number(38,0)                                        as revision_number,
 
     -- dates -----------------------------------------------------------------
-    {{ to_silver_date('order_date') }}                                   as order_date,
-    {{ to_silver_date('due_date') }}                                     as due_date,
-    {{ to_silver_date('ship_date') }}                                    as ship_date,
+    order_date                                                           as order_date,
+    due_date                                                             as due_date,
+    ship_date                                                            as ship_date,
 
     -- status and channel ----------------------------------------------------
     status::number(38,0)                                                 as status_code,
@@ -68,7 +72,7 @@ select
 
     -- audit -----------------------------------------------------------------
     rowguid                                                              as rowguid,
-    {{ to_silver_date('modified_date') }}                                as modified_date,
+    modified_date                                                        as sales_order_header_modified_date,
     -- sysdate() is UTC TIMESTAMP_NTZ; current_timestamp() would be TIMESTAMP_LTZ.
     sysdate()                                                            as _loaded_at,
     '{{ ref("adw_core", "brz_adventure_works_sales__sales_order_header") }}'::varchar as _source_relation

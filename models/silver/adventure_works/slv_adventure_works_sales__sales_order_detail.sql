@@ -2,10 +2,13 @@
 -- ONE row per sales order line. Grain matches the source PK (sales_order_detail_id).
 --
 -- Order lines with product, quantity, price and discount. Cleaned and typed only: the
--- corrupted order key is recovered and numbers and dates are cast. LINE_TOTAL reconciles
--- with the source, so it is kept as delivered and NEVER recomputed here;
+-- corrupted order key is recovered and numbers are cast. LINE_TOTAL reconciles with the
+-- source, so it is kept as delivered and NEVER recomputed here;
 -- tests/silver/..._line_total_reconciles.sql proves it still adds up. No business logic;
 -- that belongs in gold.
+--
+-- Dates are NOT converted here. modified_date is already TIMESTAMP_NTZ in bronze and is
+-- kept as a timestamp, because it is the incremental watermark of the gold fact.
 --
 -- The row count must equal bronze (tests/silver/..._row_count_matches_source.sql), so a
 -- wrong key recovery shows up as lost lines.
@@ -31,7 +34,7 @@ select
 
     -- audit -----------------------------------------------------------------
     rowguid                                                              as rowguid,
-    {{ to_silver_date('modified_date') }}                                as modified_date,
+    modified_date                                                        as sales_order_detail_modified_date,
     -- sysdate() is UTC TIMESTAMP_NTZ; current_timestamp() would be TIMESTAMP_LTZ.
     sysdate()                                                            as _loaded_at,
     '{{ ref("adw_core", "brz_adventure_works_sales__sales_order_detail") }}'::varchar as _source_relation
