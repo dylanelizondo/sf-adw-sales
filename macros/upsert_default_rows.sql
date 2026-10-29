@@ -8,6 +8,27 @@
 {% endmacro %}
 
 
+{# The text a default row (-1 / -2) gets in a text column. THE ONLY place that decides it:
+   upsert_default_rows writes it into every text column, and default_row_key (macros/
+   fact_foreign_key.sql) reads it for the fact's fallback key, so both always agree.
+   idx: 0 = the -1 row (Missing), 1 = the -2 row (Not Applicable).
+   max_len: char size of the target column, or none. When the text does not fit, text_short
+   (default '-1' / '-2') is used, cut to max_len if it still does not fit. #}
+{% macro default_row_text(idx, max_len=none) -%}
+  {%- set by_type = var('default_rows', {}).get('by_type', {}) -%}
+  {%- set raw = by_type.get('text', ['Missing', 'Not Applicable'])[idx] -%}
+  {%- if max_len is not none and (raw | length) > max_len -%}
+    {%- set short = by_type.get('text_short', ['-1', '-2'])[idx] -%}
+    {%- if (short | length) <= max_len -%}
+      {%- set raw = short -%}
+    {%- else -%}
+      {%- set raw = short[:max_len] -%}
+    {%- endif -%}
+  {%- endif -%}
+  {{- raw -}}
+{%- endmacro %}
+
+
 {# Inserts or updates ONLY the -1 and -2 rows.
    column_defaults (optional): {'column_name': [value_for_-1, value_for_-2]}
    Columns not listed fall back to var('default_rows').by_type #}
@@ -36,16 +57,7 @@
           {% elif cname in overrides %}
             {% set raw = overrides[cname][idx] %}
           {% elif col.is_string() %}
-            {% set raw     = by_type.get('text', ['Missing', 'Not Applicable'])[idx] %}
-            {% set max_len = col.char_size %}
-            {% if max_len is not none and (raw | length) > max_len %}
-              {% set short = by_type.get('text_short', ['-1', '-2'])[idx] %}
-              {% if (short | length) <= max_len %}
-                {% set raw = short %}
-              {% else %}
-                {% set raw = short[:max_len] %}
-              {% endif %}
-            {% endif %}
+            {% set raw = default_row_text(idx, col.char_size) %}
           {% elif col.is_number() %}
             {% set raw = by_type.get('number', [-1, -2])[idx] %}
           {% elif 'TIMESTAMP' in dtype %}
