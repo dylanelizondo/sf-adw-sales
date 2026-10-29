@@ -1,11 +1,14 @@
 -- slv_dim_adventure_works_sales__sales_order_header_join_detail
 -- ONE row per sales order. Reads straight from BRONZE: recovers the corrupted order key,
--- casts dates/amounts, decodes status and channel, and joins in the lines -- aggregated
+-- casts amounts, decodes status and channel, and joins in the lines -- aggregated
 -- down to one row per order (line count, units, revenue) -- all in one model, so gold
 -- needs nothing but a straight select.
 --
--- sales_order_id is the key, recovered via recover_sales_order_id.
+-- sales_order_id is the key, recovered via recover_sales_order_id. No surrogate key
 -- is minted here -- the recovered natural key is unique and reproducible on its own.
+--
+-- Dates are NOT converted here: order_date, due_date and ship_date are already DATE in
+-- bronze, and modified_date is TIMESTAMP_NTZ and is kept as a timestamp.
 {{ config(alias="adw_sales_sales_order_header_join_detail") }}
 
 select
@@ -19,10 +22,10 @@ select
     h.revision_number::number(38,0)                                       as revision_number,
 
     -- dates -------------------------------------------------------------------
-    {{ to_silver_date('h.order_date') }}                                  as order_date,
-    {{ to_silver_date('h.due_date') }}                                    as due_date,
-    {{ to_silver_date('h.ship_date') }}                                   as ship_date,
-    {{ to_silver_date('h.ship_date') }} is not null                       as is_shipped,
+    h.order_date                                                          as order_date,
+    h.due_date                                                            as due_date,
+    h.ship_date                                                           as ship_date,
+    h.ship_date is not null                                               as is_shipped,
 
     -- status and channel ----------------------------------------------------
     h.status::number(38,0)                                                as order_status_code,
@@ -68,7 +71,7 @@ select
     coalesce(l.order_total_revenue, 0)                                    as order_total_revenue,
 
     -- audit -------------------------------------------------------------------
-    {{ to_silver_date('h.modified_date') }}                               as order_modified_date
+    h.modified_date                                                       as order_modified_date
 
 from {{ ref('adw_core', 'brz_adventure_works_sales__sales_order_header') }} as h
 left join (
