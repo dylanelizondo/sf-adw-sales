@@ -6,7 +6,8 @@ select
     -- NAME is too generic to survive a join downstream, so it gets the
     -- entity prefix here rather than in every gold model.
     , name::varchar(50)                          as currency_name
-    , {{ to_silver_date('modified_date') }}      as modified_date
+    -- modified_date is already TIMESTAMP_NTZ in bronze, so no cast is needed.
+    , modified_date                              as modified_date
 
     -- Audit columns. sysdate() is UTC TIMESTAMP_NTZ in Snowflake; current_timestamp()
     -- would be TIMESTAMP_LTZ and read differently per session timezone.
