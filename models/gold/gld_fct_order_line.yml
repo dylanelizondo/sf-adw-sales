@@ -1,0 +1,158 @@
+version: 2
+
+models:
+  - name: gld_fct_order_line
+    description: >
+      Sales order line fact (one row per sales_order_detail_id).
+      Grain: one sales order line. Measures are in the order currency.
+      Dimension keys point to default rows when there is no data:
+      'Missing' (expected value that is missing) and 'Not Applicable' (does not apply).
+      Facts do not have default rows.
+
+    columns:
+      - name: order_items_key
+        description: Surrogate key of the order line.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: sales_order_detail_id
+        description: Natural ID of the sales order line (SalesOrderDetailID).
+        data_tests:
+          - unique
+          - not_null
+
+      - name: sales_order_id
+        description: Sales order ID (degenerate dimension).
+
+      - name: sales_order_number
+        description: Sales order number (degenerate dimension).
+
+      - name: purchase_order_number
+        description: Customer purchase order number (degenerate dimension).
+
+      - name: account_number
+        description: Order account number (degenerate dimension).
+
+      - name: revision_number
+        description: Order revision number.
+
+      - name: order_date
+        description: Order date.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'gld_dim_date')
+                field: date_key
+
+      - name: due_date
+        description: Due date of the order.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'gld_dim_date')
+                field: date_key
+
+      - name: ship_date
+        description: Ship date. Can be null if the order has not shipped; nulls are not validated.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'gld_dim_date')
+                field: date_key
+
+      - name: is_shipped
+        description: Indicates whether the order has already shipped.
+
+      - name: order_status_code
+        description: Order status code.
+
+      - name: order_status_label
+        description: Order status description.
+
+      - name: is_online_order
+        description: Indicates whether the sale was online.
+
+      - name: order_channel
+        description: Order channel (online or store).
+
+      - name: customer_key
+        description: Customer key. Points to gld_dim_client.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('gld_dim_client')
+                field: client_key
+
+      - name: territory_key
+        description: Sales territory key. Points to gld_dim_territory.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('gld_dim_territory')
+                field: territory_key
+
+      - name: bill_to_address_key
+        description: Billing address key. Points to gld_dim_address.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('gld_dim_address')
+                field: address_key
+
+      - name: ship_to_address_key
+        description: Shipping address key. Points to gld_dim_address.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('gld_dim_address')
+                field: address_key
+
+      - name: sales_person_key
+        description: Salesperson key. Points to gld_dim_sales_person. 'Not Applicable' if the sale had no salesperson.
+        data_tests:
+          - not_null
+        # relationships to gld_dim_sales_person: add when B is finished
+
+      - name: credit_card_key
+        description: Credit card key. Points to gld_dim_credit_card. 'Not Applicable' if not paid by credit card.
+        data_tests:
+          - not_null
+        # relationships to gld_dim_credit_card: add when A is finished
+
+      - name: store_key
+        description: Key of the store version in effect on the order date (snapshot). 'Not Applicable' if the customer has no store, 'Missing' if no version was found.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('gld_dim_store')
+                field: store_key
+
+      - name: special_offer_id
+        description: Applied special offer ID (degenerate dimension).
+
+      - name: ship_method_id
+        description: Ship method ID (degenerate dimension).
+
+      - name: currency_rate_id
+        description: Currency rate ID (degenerate dimension).
+
+      - name: order_qty
+        description: Line quantity of units.
+
+      - name: unit_price
+        description: Line unit price.
+
+      - name: unit_price_discount
+        description: Applied unit discount.
+
+      - name: line_total
+        description: Line total (net price times quantity).
+
+      - name: order_item_modified_date
+        description: Line last modified date. Used for incremental loading.
