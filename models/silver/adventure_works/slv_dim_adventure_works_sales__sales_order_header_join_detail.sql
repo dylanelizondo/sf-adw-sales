@@ -9,7 +9,7 @@
 --
 -- Dates are NOT converted here: order_date, due_date and ship_date are already DATE in
 -- bronze, and modified_date is TIMESTAMP_NTZ and is kept as a timestamp.
-{{ config(alias="adw_sales_sales_order_header_join_detail") }}
+{{ config(alias="stg_dim_adw_sales_sales_order_header_join_detail") }}
 
 select
     -- keys ----------------------------------------------------------------
@@ -58,6 +58,8 @@ select
     h.ship_method_id::number(38,0)                                        as ship_method_id,
     h.credit_card_id::number(38,0)                                        as credit_card_id,
     h.currency_rate_id::number(38,0)                                      as currency_rate_id,
+    -- store behind the customer (NULL for an individual); the fact finds the Type 2 dim_store version with it
+    c.store_id                                                            as store_id,
 
     -- amounts -----------------------------------------------------------------
     h.sub_total::number(19,4)                                             as sub_total,
@@ -86,5 +88,7 @@ left join (
     group by 1
 ) as l
     on {{ recover_sales_order_id('h.sales_order_id') }} = l.sales_order_id
+left join {{ ref('slv_adventure_works_sales__customer') }} as c
+    on h.customer_id::number(38,0) = c.customer_id
 
 where {{ recover_sales_order_id('h.sales_order_id') }} is not null

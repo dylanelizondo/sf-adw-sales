@@ -9,6 +9,8 @@
 -- Uniqueness of the pair is enforced by unique_combination_of_columns in the YAML, and the row
 -- count must equal bronze (tests/silver/..._row_count_matches_source.sql).
 
+{{ config(alias="stg_dim_adw_sales_sales_order_header_sales_reason") }}
+
 select
     -- keys ----------------------------------------------------------------
     -- Surrogate key over the pair, same construction as dbt_utils.generate_surrogate_key.

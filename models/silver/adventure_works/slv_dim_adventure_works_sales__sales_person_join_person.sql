@@ -6,7 +6,7 @@
 -- is a straight select. LEFT join, so a salesperson with no matching person row is kept (with a
 -- null name) instead of silently disappearing. No surrogate key is minted here: business_entity_id
 -- is the natural key and gold mints its own sales_person_key.
-{{ config(alias="stg_dim_sales_person_join_person") }}
+{{ config(alias="stg_dim_adw_sales_sales_person_join_person") }}
 
 select
     -- keys ----------------------------------------------------------------

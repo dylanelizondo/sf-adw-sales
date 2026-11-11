@@ -13,6 +13,8 @@
 -- The row count must equal bronze (tests/silver/..._row_count_matches_source.sql), so a
 -- wrong key recovery shows up as lost lines.
 
+{{ config(alias="stg_dim_adw_sales_sales_order_detail") }}
+
 select
     -- keys ----------------------------------------------------------------
     md5(cast(coalesce(cast(try_to_number(trim(sales_order_detail_id::varchar)) as varchar),

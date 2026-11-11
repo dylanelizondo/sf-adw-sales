@@ -1,3 +1,5 @@
+{{ config(alias="stg_dim_adw_sales_sales_person") }}
+
 select
     business_entity_id,
     territory_id::number                            as territory_id,

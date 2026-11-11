@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: gld_dim_currency_rate
+    description: >
+        Gold dimension of AdventureWorks exchange rates. SCD Type 1 (dbt incremental, merge on
+        currency_rate_id): one row per rate, that is a currency pair on a date, attributes
+        overwritten in place. Straight select from slv_adventure_works_sales__currency_rate with
+        no JOINs. currency_rate_key is a surrogate key minted here with
+        dbt_utils.generate_surrogate_key; currency_rate_id stays as the natural key. A post_hook
+        (upsert_default_rows) adds two default rows, currency_rate_id -1 (Missing) and -2 (Not
+        Applicable); orders sold in local currency, which have no rate, point at the -2 row. The
+        rates are NULL on the default rows. Built as DIM_CURRENCY_RATE in Snowflake.
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: currency_rate_key
+        description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over currency_rate_id. The fact recomputes the same hash from currency_rate_id. The default rows carry the literal text 'Missing' (-1) and 'Not Applicable' (-2)."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: currency_rate_id
+        description: "Natural key, currency_rate_id of SALES.CURRENCY_RATE. Merge key of the incremental model. -1 and -2 are the default rows."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- exchange rate -----------------------------------------------------
+      - name: currency_rate_date
+        description: "Date the rate was published. 1900-01-01 on the default rows."
+
+      - name: from_currency_code
+        description: "ISO code of the currency converted from. Short text on the default rows ('-1' / '-2'), because it does not fit 'Missing' / 'Not Applicable'."
+
+      - name: to_currency_code
+        description: "ISO code of the currency converted to. Short text on the default rows ('-1' / '-2')."
+
+      - name: average_rate
+        description: "Average exchange rate of the day. NULL on the default rows."
+
+      - name: end_of_day_rate
+        description: "Exchange rate at the close of the day. NULL on the default rows."
+
+      # --- audit -------------------------------------------------------------
+      - name: currency_rate_modified_date
+        description: "Last change to the rate in the source system. 1900-01-01 on the default rows."

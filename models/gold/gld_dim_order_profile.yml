@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: gld_dim_order_profile
+    description: >
+        Gold junk dimension of AdventureWorks orders: one row per combination of order status,
+        sales channel and shipped flag found in the orders (a few dozen), plus the two default
+        rows (order_profile_id -1 Missing, -2 Not Applicable) added by upsert_default_rows. It
+        holds the low-cardinality descriptors that would otherwise repeat on every row of the
+        fact, which carries only order_profile_key. SCD Type 1 (dbt incremental, merge on
+        order_profile_id), straight select from slv_dim_adventure_works_sales__order_profile with
+        no JOINs. order_profile_key is minted here over order_profile_id; the fact recomputes the
+        same hash from the same three attributes (order_profile_id macro), so no join is needed.
+        Built as DIM_ORDER_PROFILE in Snowflake.
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: order_profile_key
+        description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over order_profile_id."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: order_profile_id
+        description: "Natural key: status * 100 + channel * 10 + shipped (order_profile_id macro); 9 stands for an unknown status or channel. Merge key of the incremental model. -1 and -2 are the default rows."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- descriptors -------------------------------------------------------------
+      - name: order_status_code
+        description: "Original order status: 1 in process, 2 approved, 3 backordered, 4 rejected, 5 shipped, 6 cancelled."
+
+      - name: order_status_label
+        description: "Human-readable order status, decoded from order_status_code."
+
+      - name: is_online_order
+        description: "True when the order was placed online, false when a salesperson placed it."
+
+      - name: order_channel
+        description: "Sales channel, Online or Salesperson."
+
+      - name: is_shipped
+        description: "True when the order has a ship date."

@@ -1,3 +1,5 @@
+{{ config(alias="stg_dim_adw_person_address") }}
+
 select
     address_id,
     address_line1,

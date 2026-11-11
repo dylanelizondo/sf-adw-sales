@@ -13,7 +13,7 @@
 -- that come from the person survey XML (age band, education, occupation, ...) are not carried
 -- here: they come back once that XML is flattened in bronze too.
 -- Both joined keys have exactly one row per business_entity_id, so the joins cannot fan out.
-{{ config(alias="adw_sales_customer_join_store_person") }}
+{{ config(alias="stg_dim_adw_sales_customer_join_store_person") }}
 
 select
     -- key -------------------------------------------------------------------

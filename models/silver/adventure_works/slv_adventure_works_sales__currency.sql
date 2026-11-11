@@ -1,6 +1,8 @@
 -- Silver model. Same grain as bronze (one row per currency), properly typed and named.
 -- No aggregation and no business logic: dimensional modelling belongs in gold.
 
+{{ config(alias="stg_dim_adw_sales_currency") }}
+
 select
       currency_code::varchar(3)                  as currency_code
     -- NAME is too generic to survive a join downstream, so it gets the

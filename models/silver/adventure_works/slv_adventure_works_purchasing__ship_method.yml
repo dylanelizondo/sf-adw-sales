@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_purchasing__ship_method
+    description: >
+        Lookup of shipping methods with their flat and per-weight charges. One row per shipping
+        method, equal to PURCHASING.SHIP_METHOD in the source. Cleaned and typed only. Mints
+        ship_method_key from ship_method_id so gold never has to recompute it.
+
+    columns:
+      - name: ship_method_key
+        description: "PK. Surrogate key, md5 of ship_method_id."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: ship_method_id
+        description: "Natural key. Unique identifier of the shipping method in the source system."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: ship_method_name
+        description: "Name of the shipping method, for example XRQ - TRUCK GROUND."
+        data_tests:
+          - not_null
+
+      - name: ship_base
+        description: "Flat charge of the shipping method."
+
+      - name: ship_rate
+        description: "Variable charge per unit of weight."
+
+      - name: ship_method_modified_date
+        description: "Last change to the shipping method in the source system."

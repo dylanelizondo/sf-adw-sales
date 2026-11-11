@@ -13,6 +13,8 @@
 -- The row count must equal bronze (tests/silver/..._row_count_matches_source.sql): a
 -- wrong key recovery would drop rows, and that test is what makes it loud.
 
+{{ config(alias="stg_dim_adw_sales_sales_order_header") }}
+
 select
     -- keys ----------------------------------------------------------------
     md5(cast(coalesce(cast({{ recover_sales_order_id('sales_order_id') }} as varchar),

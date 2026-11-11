@@ -1,3 +1,5 @@
+{{ config(alias="stg_dim_adw_sales_credit_card") }}
+
 select
     credit_card_id,
     card_type,

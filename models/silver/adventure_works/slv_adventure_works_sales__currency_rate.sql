@@ -5,6 +5,8 @@
 -- referencing order was placed. That alignment is broken today -- see the model description
 -- in slv_adventure_works_sales__currency_rate.yml before using this table for currency conversion.
 
+{{ config(alias="stg_dim_adw_sales_currency_rate") }}
+
 select
       currency_rate_id::number(38,0)                 as currency_rate_id
     -- Bronze already delivers this as DATE, so no cast is needed.
