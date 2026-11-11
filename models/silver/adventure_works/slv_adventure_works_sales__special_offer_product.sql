@@ -2,6 +2,8 @@
 -- ONE row per special_offer + product pair. Grain matches the source composite PK.
 -- Simple bridge between promotions and the products they apply to.
 
+{{ config(alias="stg_dim_adw_sales_special_offer_product") }}
+
 select
     -- grain keys ----------------------------------------------------------
     special_offer_id,

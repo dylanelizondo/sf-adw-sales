@@ -23,7 +23,7 @@
 --
 -- Columns are listed one by one, not with a wildcard, so a column added to a source model has to
 -- be added here before gold can see it.
-{{ config(alias="adw_sales_sales_order_detail_join_header") }}
+{{ config(alias="stg_dim_adw_sales_sales_order_detail_join_header") }}
 
 select
     -- keys ----------------------------------------------------------------

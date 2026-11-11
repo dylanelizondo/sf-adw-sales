@@ -1,3 +1,5 @@
+{{ config(alias="stg_dim_adw_person_state_province") }}
+
 select
     state_province_id,
     state_province_code,

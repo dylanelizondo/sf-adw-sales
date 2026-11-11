@@ -7,6 +7,8 @@
 -- entity). account_number is surfaced as-is; it is derived by the source system
 -- and carries no transformation here.
 
+{{ config(alias="stg_dim_adw_sales_customer") }}
+
 select
     -- keys ----------------------------------------------------------------
     customer_id,

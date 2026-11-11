@@ -1,3 +1,5 @@
+{{ config(alias="stg_dim_adw_person_address_join_state_province") }}
+
 select
     a.address_id,
     a.address_line1,

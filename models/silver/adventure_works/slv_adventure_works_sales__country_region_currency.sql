@@ -2,6 +2,8 @@
 -- ONE row per country + currency pair. Grain matches the source composite PK.
 -- Trivial bridge: no transformations needed, bronze already types the audit column.
 
+{{ config(alias="stg_dim_adw_sales_country_region_currency") }}
+
 select
     -- grain keys ----------------------------------------------------------
     country_region_code,

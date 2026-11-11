@@ -5,6 +5,8 @@
 -- this model aligns them to the project convention. Bronze preserves the source names
 -- as-is; the rename lives here and only here.
 
+{{ config(alias="stg_dim_adw_sales_sales_reason") }}
+
 select
     -- keys ----------------------------------------------------------------
     md5(cast(coalesce(cast(salesreasonid as varchar),

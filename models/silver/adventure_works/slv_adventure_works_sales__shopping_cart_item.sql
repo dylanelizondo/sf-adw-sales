@@ -5,6 +5,8 @@
 -- is built as a full table regardless; its small size is not a reason to skip
 -- the silver layer — it is still a legitimate sales entity referenced by gold.
 
+{{ config(alias="stg_dim_adw_sales_shopping_cart_item") }}
+
 select
     -- keys ----------------------------------------------------------------
     md5(cast(coalesce(cast(shopping_cart_item_id as varchar),

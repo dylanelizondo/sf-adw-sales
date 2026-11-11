@@ -9,7 +9,7 @@
 --
 -- Dates are NOT converted here: order_date, due_date and ship_date are already DATE in
 -- bronze, and modified_date is TIMESTAMP_NTZ and is kept as a timestamp.
-{{ config(alias="adw_sales_sales_order_header_join_detail") }}
+{{ config(alias="stg_dim_adw_sales_sales_order_header_join_detail") }}
 
 select
     -- keys ----------------------------------------------------------------

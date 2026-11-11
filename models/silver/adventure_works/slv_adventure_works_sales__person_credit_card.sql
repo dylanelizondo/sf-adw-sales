@@ -1,3 +1,5 @@
+{{ config(alias="stg_dim_adw_sales_person_credit_card") }}
+
 select
     business_entity_id,
     credit_card_id,

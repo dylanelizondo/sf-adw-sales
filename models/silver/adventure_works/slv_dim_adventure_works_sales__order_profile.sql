@@ -7,7 +7,7 @@
 -- order_profile_id (macros/order_profile_id.sql) is deterministic from the three attributes, so
 -- the facts compute the same id from the columns they carry. The labels follow from the codes,
 -- so the distinct cannot produce two rows for one id (tested: order_profile_id is unique).
-{{ config(alias="adw_sales_order_profile") }}
+{{ config(alias="stg_dim_adw_sales_order_profile") }}
 
 select distinct
     {{ order_profile_id('status_code', 'is_online_order', 'ship_date is not null') }} as order_profile_id,

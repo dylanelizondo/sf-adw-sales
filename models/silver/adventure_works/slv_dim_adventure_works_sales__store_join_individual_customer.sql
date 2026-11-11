@@ -1,4 +1,4 @@
-{{ config(alias="stg_dim_store_join_individual_customer") }}
+{{ config(alias="stg_dim_adw_sales_store_join_individual_customer") }}
 select
     -- keys ----------------------------------------------------------------
     c.customer_id,

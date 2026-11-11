@@ -10,6 +10,8 @@
 -- TEXT and fail on them (TRY_TO_DATE with a format on a DATE), so every column is read
 -- through ::varchar, which works whatever the bronze type is.
 
+{{ config(alias="stg_dim_adw_sales_collision_tracker") }}
+
 select
     -- keys ----------------------------------------------------------------
     md5(cast(coalesce(cast(nullif(trim(incident_number::varchar), '') as varchar),

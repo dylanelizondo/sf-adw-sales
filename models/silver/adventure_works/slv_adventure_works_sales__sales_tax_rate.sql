@@ -1,3 +1,5 @@
+{{ config(alias="stg_dim_adw_sales_sales_tax_rate") }}
+
 select
     sales_tax_rate_id,
     state_province_id::number(38,0)                 as state_province_id,

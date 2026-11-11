@@ -6,6 +6,8 @@
 -- apply to. special_offer_key is minted HERE from special_offer_id so gold never has to
 -- recompute it. One row per promotion already, so no CTE or join is needed here.
 
+{{ config(alias="stg_dim_adw_sales_special_offer") }}
+
 select
     -- keys ----------------------------------------------------------------
     -- Same md5-of-varchar construction as the store and person surrogate keys, so a
