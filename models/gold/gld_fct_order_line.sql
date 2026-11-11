@@ -7,6 +7,21 @@
     )
 }}
 
+-- The keys below are hashes recomputed from the ids (fact_foreign_key), so the SQL never reads
+-- these dimensions. The depends_on comments declare them to dbt anyway: they appear in the lineage
+-- and are built before this fact. Add one here when a new dimension key is added. dim_store is
+-- not listed because the model already ref()s it for the Type 2 lookup.
+-- depends_on: {{ ref('gld_dim_client') }}
+-- depends_on: {{ ref('gld_dim_territory') }}
+-- depends_on: {{ ref('gld_dim_address') }}
+-- depends_on: {{ ref('gld_dim_sales_person') }}
+-- depends_on: {{ ref('gld_dim_credit_card') }}
+-- depends_on: {{ ref('gld_dim_order_profile') }}
+-- depends_on: {{ ref('gld_dim_special_offer') }}
+-- depends_on: {{ ref('gld_dim_ship_method') }}
+-- depends_on: {{ ref('gld_dim_currency_rate') }}
+-- depends_on: {{ ref('ADW_PRODUCTION', 'gld_dim_product') }}
+
 -- fct_order_line
 -- ONE row per sales order line (sales_order_detail_id), plus one charge row per order with tax or
 -- freight. Product rows equal
