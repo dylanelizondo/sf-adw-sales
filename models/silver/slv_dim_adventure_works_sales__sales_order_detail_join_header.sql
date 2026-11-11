@@ -46,7 +46,10 @@ select
 
     -- audit: incremental watermark of the fact. Falls back to the line date
     -- when the header is missing, so the line is never skipped.
-    coalesce(greatest(d.modified_date, h.modified_date), d.modified_date) as order_item_modified_date
+    coalesce(
+        greatest(d.sales_order_detail_modified_date, h.sales_order_header_modified_date),
+        d.sales_order_detail_modified_date
+    ) as order_item_modified_date
 
 from {{ ref('slv_adventure_works_sales__sales_order_detail') }} as d
 left join {{ ref('slv_adventure_works_sales__sales_order_header') }} as h

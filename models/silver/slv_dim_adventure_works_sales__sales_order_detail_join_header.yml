@@ -10,7 +10,7 @@ models:
         slv_adventure_works_sales__customer. Left joins mean a line never disappears, even if
         its header is missing; in that case the header columns are null. Keys are inherited
         from the silver tables, not minted here. order_item_modified_date is the incremental
-        watermark of gld_fct_order_items. Order-level totals (sub_total, tax_amt, freight,
+        watermark of gld_fct_order_line. Order-level totals (sub_total, tax_amt, freight,
         total_due) are NOT included: they would repeat on every line and a SUM would multiply them.
 
     columns:
@@ -120,5 +120,5 @@ models:
 
       # --- audit -----------------------------------------------------------
       - name: order_item_modified_date
-        description: "Latest modification of the line or its header. Incremental watermark of gld_fct_order_items. Falls back to the line date when the header is missing."
+        description: "Latest modification of the line or its header. Incremental watermark of gld_fct_order_line. Falls back to the line date when the header is missing."
         data_tests: [not_null]

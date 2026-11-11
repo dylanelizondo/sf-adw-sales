@@ -5,9 +5,9 @@ models:
     description: >
         Sales order lines with product, quantity, price and discount, cleaned and typed. One row
         per order line. The corrupted order key is recovered with recover_sales_order_id and
-        numbers and dates are cast. LINE_TOTAL is kept exactly as delivered because it reconciles
-        with the source; a test proves it still adds up. Rows whose keys cannot be parsed are
-        dropped; a row-count test against bronze makes any loss fail the build.
+        numbers are cast. LINE_TOTAL is kept exactly as delivered because it reconciles with the
+        source; a test proves it still adds up. Rows whose keys cannot be parsed are dropped; a
+        row-count test against bronze makes any loss fail the build.
 
     config:
       meta:
@@ -23,7 +23,7 @@ models:
           readme: |
             # slv_adventure_works_sales__sales_order_detail
 
-            Sales order lines with product, quantity, price and discount, cleaned and typed. One row per order line. The corrupted order key is recovered with recover_sales_order_id and numbers and dates are cast. LINE_TOTAL is kept exactly as delivered because it reconciles with the source; a test proves it still adds up. Rows whose keys cannot be parsed are dropped; a row-count test against bronze makes any loss fail the build.
+            Sales order lines with product, quantity, price and discount, cleaned and typed. One row per order line. The corrupted order key is recovered with recover_sales_order_id and numbers are cast. LINE_TOTAL is kept exactly as delivered because it reconciles with the source; a test proves it still adds up. Rows whose keys cannot be parsed are dropped; a row-count test against bronze makes any loss fail the build.
 
             **Layer:** silver
             **Subject area:** Sales
@@ -41,7 +41,7 @@ models:
             | UNIT_PRICE_DISCOUNT | Discount applied to the unit price, as a decimal fraction. |
             | LINE_TOTAL | Line total as delivered by the source (quantity times price net of discount). Not recomputed; the line_total_reconciles test proves it adds up. |
             | ROWGUID | Globally unique identifier (GUID) used by the source system for row-level replication. |
-            | MODIFIED_DATE | Date of the last change to the record in the source system, cast to DATE with to_silver_date. |
+            | SALES_ORDER_DETAIL_MODIFIED_DATE | Timestamp of the last change to the record in the source system, taken as delivered. |
             | _LOADED_AT | UTC timestamp of when this row was built in the silver layer. |
             | _SOURCE_RELATION | Bronze model this row was read from. |
 
@@ -113,8 +113,8 @@ models:
       - name: rowguid
         description: "Globally unique identifier (GUID) used by the source system for row-level replication."
 
-      - name: modified_date
-        description: "Date of the last change to the record in the source system, cast to DATE with to_silver_date."
+      - name: sales_order_detail_modified_date
+        description: "Timestamp of the last change to the record in the source system, taken as delivered."
         data_tests: [not_null]
 
       - name: _loaded_at

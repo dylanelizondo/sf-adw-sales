@@ -4,10 +4,10 @@ models:
   - name: slv_adventure_works_sales__sales_order_header
     description: >
         Header of sales orders, cleaned and typed. One row per sales order. The corrupted order
-        key is recovered with recover_sales_order_id, dates and amounts are cast, and the status
-        and channel codes are decoded next to the original codes. COMMENT is dropped because it
-        is 100% NULL in the source. Rows whose key cannot be recovered are dropped; a row-count
-        test against bronze makes any loss fail the build.
+        key is recovered with recover_sales_order_id, amounts are cast, and the status and
+        channel codes are decoded next to the original codes. Dates are kept as delivered from
+        bronze. COMMENT is dropped because it is 100% NULL in the source. Rows whose key cannot
+        be recovered are dropped; a row-count test against bronze makes any loss fail the build.
 
     config:
       meta:
@@ -23,7 +23,7 @@ models:
           readme: |
             # slv_adventure_works_sales__sales_order_header
 
-            Header of sales orders, cleaned and typed. One row per sales order. The corrupted order key is recovered with recover_sales_order_id, dates and amounts are cast, and the status and channel codes are decoded next to the original codes. COMMENT is dropped because it is 100% NULL in the source. Rows whose key cannot be recovered are dropped; a row-count test against bronze makes any loss fail the build.
+            Header of sales orders, cleaned and typed. One row per sales order. The corrupted order key is recovered with recover_sales_order_id, amounts are cast, and the status and channel codes are decoded next to the original codes. Dates are kept as delivered from bronze. COMMENT is dropped because it is 100% NULL in the source. Rows whose key cannot be recovered are dropped; a row-count test against bronze makes any loss fail the build.
 
             **Layer:** silver
             **Subject area:** Sales
@@ -33,9 +33,9 @@ models:
             | SALES_ORDER_KEY | Surrogate key, md5 of the recovered sales_order_id, built the same way as the other silver surrogate keys. |
             | SALES_ORDER_ID | Natural key. Sales order identifier, recovered from the corrupted source key with recover_sales_order_id. |
             | REVISION_NUMBER | Revision number of the document. Incremented on every change. |
-            | ORDER_DATE | Date the order was placed, cast to DATE with to_silver_date. |
-            | DUE_DATE | Date the delivery was promised for, cast to DATE with to_silver_date. |
-            | SHIP_DATE | Date the order was shipped, cast to DATE with to_silver_date. Null while it has not shipped. |
+            | ORDER_DATE | Date the order was placed, taken as delivered. |
+            | DUE_DATE | Date the delivery was promised for, taken as delivered. |
+            | SHIP_DATE | Date the order was shipped, taken as delivered. Null while it has not shipped. |
             | STATUS_CODE | Original order status: 1 in process, 2 approved, 3 backordered, 4 rejected, 5 shipped, 6 cancelled. |
             | STATUS_LABEL | Human-readable order status, decoded from status_code. |
             | ONLINE_ORDER_FLAG_CODE | Original online order flag: 1 when the order was placed online, 0 when a salesperson placed it. |
@@ -58,7 +58,7 @@ models:
             | FREIGHT | Freight cost charged on the order. |
             | TOTAL_DUE | Total amount due on the order (subtotal + tax + freight). |
             | ROWGUID | Globally unique identifier (GUID) used by the source system for row-level replication. |
-            | MODIFIED_DATE | Date of the last change to the record in the source system, cast to DATE with to_silver_date. |
+            | SALES_ORDER_HEADER_MODIFIED_DATE | Timestamp of the last change to the record in the source system, taken as delivered. |
             | _LOADED_AT | UTC timestamp of when this row was built in the silver layer. |
             | _SOURCE_RELATION | Bronze model this row was read from. |
 
@@ -84,15 +84,15 @@ models:
 
       # --- dates -------------------------------------------------------------
       - name: order_date
-        description: "Date the order was placed, cast to DATE with to_silver_date."
+        description: "Date the order was placed, taken as delivered."
         data_tests: [not_null]
 
       - name: due_date
-        description: "Date the delivery was promised for, cast to DATE with to_silver_date."
+        description: "Date the delivery was promised for, taken as delivered."
         data_tests: [not_null]
 
       - name: ship_date
-        description: "Date the order was shipped, cast to DATE with to_silver_date. Null while it has not shipped."
+        description: "Date the order was shipped, taken as delivered. Null while it has not shipped."
 
       # --- status and channel --------------------------------------------------
       - name: status_code
@@ -201,8 +201,8 @@ models:
       - name: rowguid
         description: "Globally unique identifier (GUID) used by the source system for row-level replication."
 
-      - name: modified_date
-        description: "Date of the last change to the record in the source system, cast to DATE with to_silver_date."
+      - name: sales_order_header_modified_date
+        description: "Timestamp of the last change to the record in the source system, taken as delivered."
         data_tests: [not_null]
 
       - name: _loaded_at

@@ -20,7 +20,7 @@ models:
         marital status, income band) are deliberately left out.
         Territory and addresses are NOT carried here: the territory and the bill-to and ship-to
         addresses belong to the order, not to the client, so they travel on the fact
-        (territory_key, bill_to_address_key, ship_to_address_key). The fact gld_fct_order_items
+        (territory_key, bill_to_address_key, ship_to_address_key). The fact gld_fct_order_line
         joins on customer_key = client_key; dim_store joins on store_id and holds the store details.
 
     config:
@@ -37,7 +37,7 @@ models:
           readme: |
             # dim_client
 
-            Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to slv_adventure_works_sales__customer). client_key is a surrogate key minted here with dbt_utils.generate_surrogate_key over customer_id, since silver carries no key of its own. Adds the client's display name: the store name for reseller stores and the person's full name for individual customers. Individual clients also carry a few non-sensitive self-reported attributes from adw_core's slv_adventure_works_person__person (age band, education, occupation, children, cars, home ownership); stores never do. Email, phone and the sensitive survey answers (gender, marital status, income band) are deliberately left out. Territory and addresses are not carried here: they belong to the order and travel on the fact (territory_key, bill_to_address_key, ship_to_address_key). The fact gld_fct_order_items joins on customer_key = client_key; dim_store joins on store_id and holds the store details.
+            Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to slv_adventure_works_sales__customer). client_key is a surrogate key minted here with dbt_utils.generate_surrogate_key over customer_id, since silver carries no key of its own. Adds the client's display name: the store name for reseller stores and the person's full name for individual customers. Individual clients also carry a few non-sensitive self-reported attributes from adw_core's slv_adventure_works_person__person (age band, education, occupation, children, cars, home ownership); stores never do. Email, phone and the sensitive survey answers (gender, marital status, income band) are deliberately left out. Territory and addresses are not carried here: they belong to the order and travel on the fact (territory_key, bill_to_address_key, ship_to_address_key). The fact gld_fct_order_line joins on customer_key = client_key; dim_store joins on store_id and holds the store details.
 
             **Layer:** gold
             **Subject area:** Sales
@@ -48,7 +48,7 @@ models:
             | CUSTOMER_ID | Natural key. Unique identifier of the customer in the source system; merge key of the incremental model. |
             | CLIENT_TYPE | Client classification from silver. INDIVIDUAL when only a person is set, STORE when a store is set (a store wins over a person for the 635 ambiguous rows), UNKNOWN when neither is set. |
             | CLIENT_NAME | Display name: the store name for STORE clients, the person's full name for INDIVIDUAL clients, 'Unknown' when neither is available (the dim_client__every_client_has_a_name test fails if that happens). Contains personal names for individuals. |
-            | CLIENT_ACCOUNT_NUMBER | Customer account number, derived in the source system. Surfaced as-is; issue #34 flags it as ambiguous, so do not use it as a key. Not the order account number carried by gld_fct_order_items. |
+            | CLIENT_ACCOUNT_NUMBER | Customer account number, derived in the source system. Surfaced as-is; issue #34 flags it as ambiguous, so do not use it as a key. Not the order account number carried by gld_fct_order_line. |
             | CLIENT_HAS_DEMOGRAPHICS_SURVEY | True when the individual's survey holds real answers rather than an empty form. Null for stores. |
             | CLIENT_AGE_BAND | Banded age derived from the survey birth date; the raw birth date is not exposed. Self-reported. Individuals with a survey only. |
             | CLIENT_EDUCATION | Highest education band reached, from Partial High School to Graduate Degree. Self-reported. |
@@ -91,7 +91,7 @@ models:
         description: "Display name: the store name for STORE clients, the person's full name for INDIVIDUAL clients, 'Unknown' when neither is available (the dim_client__every_client_has_a_name test fails if that happens). Contains personal names for individuals."
 
       - name: client_account_number
-        description: "Customer account number, derived in the source system. Surfaced as-is; issue #34 flags it as ambiguous, so do not use it as a key. Not the order account number carried by gld_fct_order_items."
+        description: "Customer account number, derived in the source system. Surfaced as-is; issue #34 flags it as ambiguous, so do not use it as a key. Not the order account number carried by gld_fct_order_line."
 
       # --- individual clients only (null for stores) ---------------------------------
       - name: client_has_demographics_survey

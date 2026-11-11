@@ -7,15 +7,17 @@
 
 select
       currency_rate_id::number(38,0)                 as currency_rate_id
-    , {{ to_silver_date('currency_rate_date') }}      as currency_rate_date
+    -- Bronze already delivers this as DATE, so no cast is needed.
+    , currency_rate_date                             as currency_rate_date
     , from_currency_code::varchar(3)                 as from_currency_code
     , to_currency_code::varchar(3)                   as to_currency_code
     , average_rate::number(19,6)                     as average_rate
     , end_of_day_rate::number(19,6)                  as end_of_day_rate
-    , {{ to_silver_date('modified_date') }}          as modified_date
+    -- Bronze already delivers this as TIMESTAMP_NTZ, so no cast is needed.
+    , modified_date                                  as modified_date
 
     -- Audit columns. sysdate() is UTC TIMESTAMP_NTZ in Snowflake; current_timestamp()
     -- would be TIMESTAMP_LTZ and read differently per session timezone.
     , sysdate()                                                                             as _loaded_at
-    , '{{ ref("adw_core", "brz_adventure_works_sales__currency_rate") }}'::varchar           as _source_relation
-from {{ ref('adw_core', 'brz_adventure_works_sales__currency_rate') }}
+    , 'ADW_BRONZE_UAT.ADVENTURE_WORKS.adw_sales_currency_rate'::varchar           as _source_relation
+from ADW_BRONZE_UAT.ADVENTURE_WORKS.adw_sales_currency_rate
