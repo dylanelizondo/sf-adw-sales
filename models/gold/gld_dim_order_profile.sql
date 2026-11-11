@@ -14,7 +14,7 @@
 -- tests/gold/dim_order_profile__row_count_matches_silver.sql.
 --
 -- It holds the low-cardinality descriptors that would otherwise repeat on every row of
--- fct_order_items and fct_order_lines, which carry only order_profile_key.
+-- gld_fct_order_line, which carries only order_profile_key.
 --
 -- Type 1: merge keyed on order_profile_id. Straight select from ONE silver model, no JOINs. The
 -- silver rows have no modified date, so every run re-selects all of them (a few dozen); the merge

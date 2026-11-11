@@ -3,15 +3,15 @@
         materialized='incremental',
         unique_key='sales_order_detail_id',
         incremental_strategy='merge',
-        alias='fct_order_lines'
+        alias='fct_order_line'
     )
 }}
 
--- fct_order_lines
+-- fct_order_line
 -- ONE row per sales order line (sales_order_detail_id), plus one charge row per order with tax or
 -- freight. Product rows equal
 -- slv_dim_adventure_works_sales__sales_order_detail_join_header, enforced by
--- tests/gold/fct_order_lines__row_count_matches_silver.sql.
+-- tests/gold/fct_order_line__row_count_matches_silver.sql.
 --
 -- Reads from slv_dim_adventure_works_sales__sales_order_detail_join_header, which already joins
 -- each line to its order header and to the reseller store behind the order's customer. Gold adds

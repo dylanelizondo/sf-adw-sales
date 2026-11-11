@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: gld_fct_order_lines
+  - name: gld_fct_order_line
     description: >
         Gold fact of AdventureWorks sales order lines. One row per order line
         (sales_order_detail_id, equal to
@@ -56,7 +56,7 @@ models:
           termNames:
             - "Sales"
           readme: |
-            # fct_order_lines
+            # fct_order_line
 
             Gold fact of AdventureWorks sales order lines. One row per order line (equal to slv_dim_adventure_works_sales__sales_order_detail_join_header), reflecting only the current state of each line.
 
