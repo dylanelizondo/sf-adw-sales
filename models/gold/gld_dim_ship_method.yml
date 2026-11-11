@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: gld_dim_ship_method
+    description: >
+        Gold dimension of AdventureWorks shipping methods. SCD Type 1 (dbt incremental, merge on
+        ship_method_id): one row per shipping method, attributes overwritten in place. Straight
+        select from slv_adventure_works_purchasing__ship_method with no JOINs. ship_method_key is
+        the surrogate key silver already minted over ship_method_id, inherited and not
+        recomputed; the fact recomputes the same hash from ship_method_id. A post_hook
+        (upsert_default_rows) adds two default rows, ship_method_id -1 (Missing) and -2 (Not
+        Applicable). The rates are NULL on the default rows. Built as DIM_SHIP_METHOD in
+        Snowflake.
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: ship_method_key
+        description: "PK. Surrogate key inherited from silver (md5 of ship_method_id). The default rows carry the literal text 'Missing' (-1) and 'Not Applicable' (-2)."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: ship_method_id
+        description: "Natural key, ship_method_id of PURCHASING.SHIP_METHOD. Merge key of the incremental model. -1 and -2 are the default rows."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- shipping method ---------------------------------------------------
+      - name: ship_method_name
+        description: "Name of the shipping method, for example XRQ - TRUCK GROUND. 'Missing' / 'Not Applicable' on the default rows."
+        data_tests:
+          - not_null
+
+      - name: ship_base
+        description: "Flat charge of the shipping method. NULL on the default rows."
+
+      - name: ship_rate
+        description: "Variable charge per unit of weight. NULL on the default rows."
+
+      # --- audit -------------------------------------------------------------
+      - name: ship_method_modified_date
+        description: "Last change to the shipping method in the source system. 1900-01-01 on the default rows."

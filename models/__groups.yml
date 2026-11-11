@@ -1,0 +1,20 @@
+version: 2
+
+# Groups declare ownership over a set of models. dbt requires them to be defined
+# in a properties file under model-paths (here, models/) -- a `groups:` key in
+# dbt_project.yml is silently ignored.
+#
+# The group is assigned to the models in dbt_project.yml via `+group:`.
+#
+# This project owns the Sales domain only. Bronze lives in adw_core and is owned
+# there by the `it_adventure_works` group; we consume it through dbt Mesh
+# (dependencies.yml + ref('adw_core', ...)) and never redeclare it here.
+groups:
+  - name: sales_adventure_works
+    description: >
+      Silver, gold and platinum models for the AdventureWorks Sales domain: orders,
+      customers, salespeople, territories, promotions and currency. Owned by the
+      Sales data team; bronze inputs come from adw_core.
+    owner:
+      name: Sales Data
+      email: sales-data@adw.com

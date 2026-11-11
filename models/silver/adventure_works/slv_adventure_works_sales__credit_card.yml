@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__credit_card
+    description: >
+      Silver model for CREDIT_CARD. PII NOTE: the raw CARD_NUMBER (14-digit PAN) is never
+      landed in silver. We expose only CARD_LAST_FOUR and a one-way hash (CARD_NUMBER_HASH)
+      of the full number. ASSUMPTION (open decision, see team wiki "Open decisions" #3 / B-01):
+      no role currently needs an unmasked PAN, so no Snowflake masking policy was implemented.
+      If that assumption is wrong, this model needs to be revisited to add a masking policy
+      instead of (or in addition to) the hash.
+    columns:
+      - name: credit_card_id
+        description: "Unique identifier for each credit card (primary key)."
+        tests:
+          - unique
+          - not_null
+
+      - name: card_type
+        description: "Type/brand of the credit card."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['SuperiorCard', 'Distinguish', 'ColonialVoice', 'Vista']
+
+      - name: card_last_four
+        description: "Last four digits of the card number, safe to expose for identification purposes."
+        tests:
+          - not_null
+
+      - name: card_number_hash
+        description: "One-way SHA-2 hash of the full card number (PAN). The raw PAN is never stored in silver. PII/PCI column — flagged for governance tagging."
+        tests:
+          - not_null
+
+      - name: expiry_date
+        description: "Card expiration date, derived as the last day of the month from the original EXP_MONTH and EXP_YEAR columns."
+
+      - name: modified_date
+        description: "Last modification date of the original record, cast to DATE type."
+
+      - name: _loaded_at
+        description: "Timestamp of when this row was loaded into the silver layer."
+
+      - name: _source_relation
+        description: "Source table this record was loaded from."

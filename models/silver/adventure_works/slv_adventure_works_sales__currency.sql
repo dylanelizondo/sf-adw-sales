@@ -1,0 +1,18 @@
+-- Silver model. Same grain as bronze (one row per currency), properly typed and named.
+-- No aggregation and no business logic: dimensional modelling belongs in gold.
+
+{{ config(alias="stg_dim_adw_sales_currency") }}
+
+select
+      currency_code::varchar(3)                  as currency_code
+    -- NAME is too generic to survive a join downstream, so it gets the
+    -- entity prefix here rather than in every gold model.
+    , name::varchar(50)                          as currency_name
+    -- modified_date is already TIMESTAMP_NTZ in bronze, so no cast is needed.
+    , modified_date                              as modified_date
+
+    -- Audit columns. sysdate() is UTC TIMESTAMP_NTZ in Snowflake; current_timestamp()
+    -- would be TIMESTAMP_LTZ and read differently per session timezone.
+    , sysdate()                                                                        as _loaded_at
+    , '{{ ref("adw_core", "brz_adventure_works_sales__currency") }}'::varchar           as _source_relation
+from {{ ref('adw_core', 'brz_adventure_works_sales__currency') }}

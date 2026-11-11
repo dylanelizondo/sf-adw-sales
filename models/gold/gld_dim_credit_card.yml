@@ -1,0 +1,83 @@
+version: 2
+
+models:
+  - name: gld_dim_credit_card
+    description: >
+        Gold dimension of AdventureWorks credit cards. SCD Type 1 (dbt incremental, merge on
+        credit_card_id): one row per card, attributes overwritten in place. Straight select from
+        slv_adventure_works_sales__credit_card with no JOINs. credit_card_key is a surrogate key
+        minted here with dbt_utils.generate_surrogate_key; credit_card_id stays as the natural key.
+        A post_hook (upsert_default_rows) adds two default rows, credit_card_id -1 (Missing) and -2
+        (Not Applicable); orders paid without a card point at the -2 row. The real card number never
+        reaches silver or gold: only the last four digits and a one-way SHA-2 hash are exposed.
+        card_number_hash is PII/PCI and flagged as such. The default rows write 'Missing' and
+        'Not Applicable' into every text column. Built as DIM_CREDIT_CARD in Snowflake.
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["mlara"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # gld_dim_credit_card
+
+            Gold dimension of AdventureWorks credit cards. SCD Type 1 (dbt incremental, merge on credit_card_id): one row per card, attributes overwritten in place. Straight select from slv_adventure_works_sales__credit_card with no JOINs. credit_card_key is a surrogate key minted here; credit_card_id stays as the natural key. Two default rows (-1 Missing, -2 Not Applicable) are added by upsert_default_rows; orders paid without a card point at -2. The real card number never reaches silver or gold: only the last four digits and a one-way hash. card_number_hash is PII/PCI.
+
+            **Layer:** gold
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | CREDIT_CARD_KEY | PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over credit_card_id. 'Missing' on the -1 row and 'Not Applicable' on the -2 row. |
+            | CREDIT_CARD_ID | Natural key. Identifier of the credit card in the source system. -1 and -2 are the default rows. |
+            | CARD_TYPE | Brand of the card: SuperiorCard, Distinguish, ColonialVoice or Vista. 'Missing' / 'Not Applicable' on the default rows. |
+            | CARD_LAST_FOUR | Last four digits of the card number, safe to expose for identification. 'Missing' / 'Not Applicable' on the default rows. |
+            | CARD_NUMBER_HASH | One-way SHA-2 hash of the full card number. PII/PCI: treat as sensitive. 'Missing' / 'Not Applicable' on the default rows. |
+            | EXPIRY_DATE | Card expiration date, the last day of the expiry month. 1900-01-01 on the default rows. |
+            | CREDIT_CARD_MODIFIED_DATE | Last change to the card in the source system. 1900-01-01 on the default rows. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: credit_card_key
+        description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over credit_card_id. The fact recomputes the same hash from credit_card_id. The default rows carry the literal text 'Missing' (-1) and 'Not Applicable' (-2)."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: credit_card_id
+        description: "Natural key, credit_card_id of SALES.CREDIT_CARD. Merge key of the incremental model. -1 and -2 are the default rows."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- card --------------------------------------------------------------
+      - name: card_type
+        description: "Brand of the card: SuperiorCard, Distinguish, ColonialVoice or Vista. 'Missing' / 'Not Applicable' on the default rows."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["SuperiorCard", "Distinguish", "ColonialVoice", "Vista", "Missing", "Not Applicable"]
+
+      - name: card_last_four
+        description: "Last four digits of the card number, safe to expose for identification. 'Missing' / 'Not Applicable' on the default rows."
+
+      - name: card_number_hash
+        description: "One-way SHA-2 hash of the full card number (PAN). PII/PCI: treat as sensitive and do not use it to identify a person. 'Missing' / 'Not Applicable' on the default rows."
+        config:
+          meta: { contains_pii: true }
+
+      - name: expiry_date
+        description: "Card expiration date, derived in silver as the last day of the expiry month. 1900-01-01 on the default rows."
+
+      # --- audit -------------------------------------------------------------
+      - name: credit_card_modified_date
+        description: "Last change to the card in the source system. 1900-01-01 on the default rows."

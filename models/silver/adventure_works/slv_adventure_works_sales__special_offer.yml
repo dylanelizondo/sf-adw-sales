@@ -1,0 +1,123 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__special_offer
+    description: >
+        Lookup of promotions and discounts, with validity dates and the quantity range they
+        apply to. One row per promotion (16, equal to SALES.SPECIAL_OFFER). Mints
+        special_offer_key from special_offer_id so gold never has to recompute it.
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["dylan.ea"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Special Offer"
+          readme: |
+            # slv_adventure_works_sales__special_offer
+
+            Lookup of promotions and discounts over ADVENTURE_WORKS.SALES.SPECIAL_OFFER, with
+            validity dates and the quantity range each one applies to. One row per promotion (16).
+            Mints special_offer_key from special_offer_id so gold never has to recompute it.
+
+            **Layer:** silver
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | SPECIAL_OFFER_KEY | PK. Surrogate key, md5 of special_offer_id. |
+            | SPECIAL_OFFER_ID | Natural key. PK of SALES.SPECIAL_OFFER. |
+            | SPECIAL_OFFER_DESCRIPTION | Description of the promotion, for example "Volume Discount 11 to 14". |
+            | SPECIAL_OFFER_DISCOUNT_PCT | Discount percentage granted by the promotion, as a decimal fraction. |
+            | SPECIAL_OFFER_TYPE | Promotion type, for example Volume Discount, Seasonal Discount, New Product. |
+            | SPECIAL_OFFER_CATEGORY | Audience the promotion targets: Reseller, Customer, or No Discount. |
+            | SPECIAL_OFFER_START_DATE | Date the record became effective, cast from text. |
+            | SPECIAL_OFFER_END_DATE | Date the record stopped being effective, cast from text. Null while a promotion is current. |
+            | SPECIAL_OFFER_MIN_QTY | Minimum quantity for the promotion to apply. |
+            | SPECIAL_OFFER_MAX_QTY | Maximum quantity the promotion applies up to. Null when there's no cap. |
+            | SPECIAL_OFFER_MODIFIED_DATE | Last change to this promotion in the source system, cast from text. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: special_offer_key
+        description: >
+            PK. Surrogate key, md5 of special_offer_id, built the same way as the store and
+            person surrogate keys so the construction means the same thing anywhere in the mesh.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: special_offer_id
+        description: "Natural key. PK of SALES.SPECIAL_OFFER."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- identity ----------------------------------------------------------
+      - name: special_offer_description
+        description: "Description of the promotion, for example 'Volume Discount 11 to 14'."
+        data_tests: [not_null]
+
+      - name: special_offer_discount_pct
+        description: "Discount percentage granted by the promotion, as a decimal fraction."
+        data_tests: [not_null]
+
+      - name: special_offer_type
+        description: >
+            Promotion type. Observed values: Volume Discount, Seasonal Discount, Excess
+            Inventory, Discontinued Product, New Product, No Discount.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - "Volume Discount"
+                  - "Seasonal Discount"
+                  - "Excess Inventory"
+                  - "Discontinued Product"
+                  - "New Product"
+                  - "No Discount"
+
+      - name: special_offer_category
+        description: "Audience the promotion targets. Observed values: Reseller, Customer, No Discount."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Reseller", "Customer", "No Discount"]
+
+      # --- validity window -------------------------------------------------
+      - name: special_offer_start_date
+        description: "Date the record became effective. The source lands this as text, so it is cast here."
+        data_tests: [not_null]
+
+      - name: special_offer_end_date
+        description: >
+            Date the record stopped being effective. The source lands this as text, so it is
+            cast here. Documented by the source as nullable while a promotion is still
+            current; every one of the 16 rows currently carries a value.
+
+      # --- quantity range ----------------------------------------------------
+      - name: special_offer_min_qty
+        description: "Minimum quantity for the promotion to apply."
+        data_tests: [not_null]
+
+      - name: special_offer_max_qty
+        description: >
+            Maximum quantity the promotion applies up to. Null when there is no cap: 12 of
+            the 16 promotions have no max_qty.
+
+      # --- audit ---------------------------------------------------------
+      - name: special_offer_modified_date
+        description: >
+            Last change to this promotion in the source system. The source lands this as
+            text, so it is cast here.
+        data_tests: [not_null]

@@ -1,0 +1,97 @@
+version: 2
+
+models:
+  - name: gld_dim_sales_person
+    description: >
+        Gold dimension of AdventureWorks salespeople: the person who processed the transaction.
+        SCD Type 1 (dbt incremental, merge on business_entity_id): one row per salesperson (17),
+        attributes overwritten in place. Straight select from
+        slv_dim_adventure_works_sales__sales_person_join_person with no JOINs; the name is resolved
+        in silver. sales_person_key is a surrogate key minted here with
+        dbt_utils.generate_surrogate_key; business_entity_id stays as the natural key. A post_hook
+        (upsert_default_rows) adds two default rows, business_entity_id -1 (Missing) and -2
+        (Not Applicable); online sales have no salesperson and point at the -2 row. On both
+        default rows sales_quota, bonus, commission_pct, sales_ytd and sales_last_year are set to
+        NULL instead of the generic -1/-2 numbers, so commission or quota calculations on those
+        rows do not return negative values. sales_ytd and sales_last_year are pre-aggregated
+        source totals and are not additive. territory_id is a flat attribute, not a relationship:
+        the fact joins gld_dim_territory directly. Built as DIM_SALES_PERSON in Snowflake.
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["calfarol"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # gld_dim_sales_person
+
+            Gold dimension of AdventureWorks salespeople: the person who processed the transaction. SCD Type 1 (dbt incremental, merge on business_entity_id): one row per salesperson (17), attributes overwritten in place. Straight select from slv_dim_adventure_works_sales__sales_person_join_person with no JOINs. sales_person_key is a surrogate key minted here; business_entity_id stays as the natural key. Two default rows (-1 Missing, -2 Not Applicable) are added by upsert_default_rows; online sales point at -2. On both default rows the quota, bonus, commission and YTD columns are NULL. sales_ytd and sales_last_year are not additive.
+
+            **Layer:** gold
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | SALES_PERSON_KEY | PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over business_entity_id. 'Missing' on the -1 row and 'Not Applicable' on the -2 row. |
+            | BUSINESS_ENTITY_ID | Natural key. Identifier of the salesperson. -1 and -2 are the default rows. |
+            | SALES_PERSON_FULL_NAME | Display name of the salesperson. Contains PII. |
+            | TERRITORY_ID | Territory assigned to the salesperson. Flat attribute, not a relationship. |
+            | SALES_QUOTA | Sales quota assigned to the salesperson. NULL when none is assigned and on the default rows. |
+            | BONUS | Bonus amount earned by the salesperson. NULL on the default rows. |
+            | COMMISSION_PCT | Commission percentage rate of the salesperson. NULL on the default rows. |
+            | SALES_YTD | Year-to-date sales total, a pre-aggregated source snapshot. Not additive. NULL on the default rows. |
+            | SALES_LAST_YEAR | Prior year sales total, a pre-aggregated source snapshot. Not additive. NULL on the default rows. |
+            | SALES_PERSON_MODIFIED_DATE | Last change to the salesperson in the source system. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: sales_person_key
+        description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over business_entity_id. The fact recomputes the same hash from sales_person_id. The default rows carry the literal text 'Missing' (-1) and 'Not Applicable' (-2)."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: business_entity_id
+        description: "Natural key, business_entity_id of SALES.SALES_PERSON. Merge key of the incremental model. -1 and -2 are the default rows."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- identity ----------------------------------------------------------
+      - name: sales_person_full_name
+        description: "Display name of the salesperson. Null if no person row matched in silver. 'Missing' / 'Not Applicable' on the default rows. Contains PII."
+        config:
+          meta: { contains_pii: true }
+
+      # --- assignment and targets ----------------------------------------------
+      - name: territory_id
+        description: "Territory assigned to the salesperson. Flat descriptive attribute, not a relationship: the fact joins gld_dim_territory directly. Null for sales managers with no territory."
+
+      - name: sales_quota
+        description: "Sales quota assigned to the salesperson. Null when none is assigned (not zero-filled). Deliberately NULL on the -1/-2 default rows so quota calculations do not use sentinel numbers."
+
+      - name: bonus
+        description: "Bonus amount earned by the salesperson. Deliberately NULL on the -1/-2 default rows."
+
+      - name: commission_pct
+        description: "Commission percentage rate of the salesperson. Deliberately NULL on the -1/-2 default rows, so a commission calculation on an online sale (Not Applicable) does not return a negative amount."
+
+      # --- pre-aggregated source totals ----------------------------------------
+      - name: sales_ytd
+        description: "Year-to-date sales total, a pre-aggregated snapshot from the source. NOT additive: do not sum it or use it as a live metric. Deliberately NULL on the default rows."
+
+      - name: sales_last_year
+        description: "Prior year sales total, a pre-aggregated snapshot from the source. NOT additive: do not sum it or use it as a live metric. Deliberately NULL on the default rows."
+
+      # --- audit -------------------------------------------------------------------
+      - name: sales_person_modified_date
+        description: "Last change to the salesperson in the source system. 1900-01-01 on the default rows."

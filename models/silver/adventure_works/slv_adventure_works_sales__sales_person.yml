@@ -1,0 +1,51 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_sales__sales_person
+    description: "Silver model for SALES_PERSON. Cleans and types raw salesperson data, including quotas, bonuses, commission, and YTD/last year sales figures."
+    columns:
+      - name: business_entity_id
+        description: "Unique identifier for each salesperson (primary key, foreign key to person)."
+        tests:
+          - unique
+          - not_null
+
+      - name: territory_id
+        description: "Foreign key to the sales territory assigned to this salesperson (nullable — some sales managers have no assigned territory)."
+        tests:
+          - relationships:
+              arguments:
+                to: ref('adw_core', 'brz_adventure_works_sales__sales_territory')
+                field: territory_id
+
+      - name: sales_quota
+        description: "Sales quota assigned to this salesperson. NULL for 3 of 17 salespeople who have no assigned quota — intentionally left NULL (not zero-filled) to avoid skewing quota-attainment calculations downstream in gold."
+
+      - name: bonus
+        description: "Bonus amount earned by this salesperson."
+        tests:
+          - not_null
+
+      - name: commission_pct
+        description: "Commission percentage rate for this salesperson."
+        tests:
+          - not_null
+
+      - name: sales_ytd
+        description: "Year-to-date sales total for this salesperson."
+        tests:
+          - not_null
+
+      - name: sales_last_year
+        description: "Prior year sales total for this salesperson."
+        tests:
+          - not_null
+
+      - name: modified_date
+        description: "Last modification date of the original record, cast to DATE type."
+
+      - name: _loaded_at
+        description: "Timestamp of when this row was loaded into the silver layer."
+
+      - name: _source_relation
+        description: "Source table this record was loaded from."

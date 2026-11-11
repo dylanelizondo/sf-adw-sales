@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: slv_adventure_works_person__state_province
+    config:
+      alias: state_province
+    description: >
+        Silver model for AdventureWorks states/provinces. One row per state_province_id,
+        straight select from PERSON.STATE_PROVINCE. is_only_state_province_flag cast to
+        BOOLEAN per convention. name renamed to state_province_name to avoid ambiguity
+        downstream.
+
+    columns:
+      - name: state_province_id
+        description: "Natural key, state_province_id of PERSON.STATE_PROVINCE."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: state_province_code
+        description: "State/province code."
+        data_tests: [not_null]
+
+      - name: country_region_code
+        description: "ISO country/region code."
+        data_tests: [not_null]
+
+      - name: is_only_state_province
+        description: "Flag indicating this is the only state/province for its country/region. Cast from 0/1 to BOOLEAN."
+
+      - name: state_province_name
+        description: "Name of the state/province. Renamed from the source's NAME column to avoid ambiguity downstream."
+        data_tests: [not_null]
+
+      - name: territory_id
+        description: "Sales territory associated with this state/province."
+
+      - name: modified_date
+        description: "Last change to the record in the source system."
+
+      - name: _loaded_at
+        description: "Timestamp when this row was loaded into silver."
+
+      - name: _source_relation
+        description: "Fully qualified name of the source table."

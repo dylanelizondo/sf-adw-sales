@@ -5,6 +5,8 @@
 -- this model aligns them to the project convention. Bronze preserves the source names
 -- as-is; the rename lives here and only here.
 
+{{ config(alias="stg_dim_adw_sales_sales_reason") }}
+
 select
     -- keys ----------------------------------------------------------------
     md5(cast(coalesce(cast(salesreasonid as varchar),
@@ -16,6 +18,6 @@ select
     reasontype    as reason_type,
 
     -- audit ---------------------------------------------------------------
-    try_to_timestamp(modifieddate) as sales_reason_modified_date
+    modifieddate as sales_reason_modified_date
 
 from {{ ref('adw_core', 'brz_adventure_works_sales__sales_reason') }}
