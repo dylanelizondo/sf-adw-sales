@@ -27,7 +27,7 @@ models:
 
         tax_amt and freight are order amounts, so they are not repeated on every line (they
         would multiply on a SUM). Each order that has tax or freight gets ONE extra row
-        (is_order_charge = true) with product_key = '-2' (Not Applicable), NULL line measures
+        (is_order_charge = true) with product_key = 'Not Applicable', NULL line measures
         and sales_order_detail_id = -sales_order_id. Product lines carry NULL tax_amt and
         freight. sub_total and total_due stay in gld_fct_order_items. Filter on
         is_order_charge (or product_key) when counting lines or units.
@@ -238,7 +238,7 @@ models:
                 field: store_key
 
       - name: product_key
-        description: "FK to gld_dim_product (ADW_PRODUCTION project): the same hash that dimension mints over product_id. '-1' (its Missing row) when a product line has no product; '-2' (its Not Applicable row) on the order-charge row."
+        description: "FK to gld_dim_product (ADW_PRODUCTION project): the same hash that dimension mints over product_id. 'Missing' (its -1 row) when a product line has no product; 'Not Applicable' (its -2 row) on the order-charge row."
         data_tests:
           - not_null
           - relationships:

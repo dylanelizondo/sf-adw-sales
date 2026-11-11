@@ -34,12 +34,12 @@
 -- its special_offer_key is Not Applicable; an order sold in local currency has no exchange rate,
 -- so its currency_rate_key is Not Applicable too.
 -- product_key points at ADW_PRODUCTION's gld_dim_product (another dbt Mesh project): the same hash
--- that dimension mints over product_id. Its default rows are keyed '-1' / '-2', not the
--- 'Missing' / 'Not Applicable' text of this project's dimensions, so it does not use
--- fact_foreign_key().
+-- that dimension mints over product_id. Its default rows use the same 'Missing' / 'Not Applicable'
+-- key text as this project's dimensions (checked in ADW_GOLD_UAT.PRODUCTION.DIM_PRODUCT), so it
+-- goes through fact_foreign_key() like the rest.
 -- tax_amt and freight are order amounts. They are NOT repeated on every line (they would multiply
 -- on a SUM): each order that has them gets ONE extra row (is_order_charge) whose product_key is
--- Not Applicable ('-2') and whose line measures are NULL; product lines carry them as NULL. The
+-- 'Not Applicable' and whose line measures are NULL; product lines carry them as NULL. The
 -- charge row's sales_order_detail_id is -sales_order_id, so it never collides with a real line.
 -- sub_total and total_due stay in fct_order_items.
 --
@@ -269,12 +269,11 @@ select
         when i.is_order_charge then {{ default_row_key('not_applicable') }}
         else {{ fact_foreign_key('i.special_offer_id') }}
     end                                                              as special_offer_key,
-    -- gld_dim_product (ADW_PRODUCTION) keys its default rows '-1' / '-2'
-    -- the order-charge row has no product: Not Applicable
+    -- the order-charge row has no product: Not Applicable. gld_dim_product (ADW_PRODUCTION) writes
+    -- its default rows with the same 'Missing' / 'Not Applicable' text as this project's dimensions
     case
-        when i.is_order_charge then '-2'
-        when i.product_id is null then '-1'
-        else {{ dbt_utils.generate_surrogate_key(['i.product_id']) }}
+        when i.is_order_charge then {{ default_row_key('not_applicable') }}
+        else {{ fact_foreign_key('i.product_id') }}
     end                                                              as product_key,
 
     -- Type 2 store version in force on the order date ---------------------------------
