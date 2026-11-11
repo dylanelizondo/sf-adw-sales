@@ -97,7 +97,7 @@ models:
             | UNIT_PRICE | Unit price applied on the line. |
             | UNIT_PRICE_DISCOUNT | Discount applied to the unit price, as a decimal fraction. |
             | LINE_TOTAL | Line total as delivered by the source (quantity times price net of discount). |
-            | ORDER_ITEM_MODIFIED_DATE | Latest change to the line or to its order. Watermark of the incremental load. |
+            | ORDER_LINE_MODIFIED_DATE | Latest change to the line or to its order. Watermark of the incremental load. |
 
             _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
 
