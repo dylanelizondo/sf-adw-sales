@@ -72,7 +72,10 @@ select
 
     -- audit -------------------------------------------------------------------
     -- latest change to the line or to its header: the incremental watermark of the gold fact
-    greatest(d.modified_date, coalesce(h.modified_date, d.modified_date)) as order_line_modified_date
+    coalesce(
+        greatest(d.sales_order_detail_modified_date, h.sales_order_header_modified_date),
+        d.sales_order_detail_modified_date
+    )                                                                     as order_line_modified_date
 
 from {{ ref('slv_adventure_works_sales__sales_order_detail') }} as d
 left join {{ ref('slv_adventure_works_sales__sales_order_header') }} as h
