@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: slv_dim_adventure_works_sales__order_profile
+    description: >
+        Distinct combinations of order status, sales channel and shipped flag found in the
+        order headers: the rows of the junk dimension dim_order_profile. order_profile_id is
+        computed by the order_profile_id macro from the three attributes, so it is unique and
+        reproducible, and the facts derive the same id from the columns they carry.
+
+    columns:
+      - name: order_profile_id
+        description: "PK. status * 100 + channel * 10 + shipped (order_profile_id macro); 9 stands for an unknown status or channel."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: order_status_code
+        description: "Original order status: 1 in process, 2 approved, 3 backordered, 4 rejected, 5 shipped, 6 cancelled."
+
+      - name: order_status_label
+        description: "Human-readable order status, decoded from order_status_code."
+
+      - name: is_online_order
+        description: "True when the order was placed online, false when a salesperson placed it."
+
+      - name: order_channel
+        description: "Sales channel, Online or Salesperson."
+
+      - name: is_shipped
+        description: "True when the order has a ship date."
+        data_tests: [not_null]

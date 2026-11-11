@@ -1,44 +1,146 @@
 version: 2
 
 models:
-  - name: gld_fct_order_line
+  - name: gld_fct_order_lines
     description: >
-      Sales order line fact (one row per sales_order_detail_id).
-      Grain: one sales order line. Measures are in the order currency.
-      Dimension keys point to default rows when there is no data:
-      'Missing' (expected value that is missing) and 'Not Applicable' (does not apply).
-      Facts do not have default rows.
+        Gold fact of AdventureWorks sales order lines. One row per order line
+        (sales_order_detail_id, equal to
+        slv_dim_adventure_works_sales__sales_order_detail_join_header), reflecting only the
+        current state of each line. Straight select from the silver model, which already joins
+        each line to its order header and to the reseller store behind the order's customer;
+        gold adds only the dimension keys and the Type 2 store lookup.
+
+        Star schema: FKs point only at conformed gold dimensions, never at another fact, and
+        always by SURROGATE key, never by the natural id: customer_key (dim_client),
+        territory_key (dim_territory), bill_to_address_key and ship_to_address_key
+        (dim_address, one role each), sales_person_key (dim_sales_person), credit_card_key
+        (dim_credit_card), store_key (dim_store) and product_key (gld_dim_product, from the
+        ADW_PRODUCTION project). order_date, due_date and ship_date are FKs
+        to adw_core's dim_date, a role-playing dimension referenced three times; its grain is
+        the calendar date, so the date is its own key. special_offer_id, ship_method_id and
+        currency_rate_id are degenerate dimensions -- no gold dimension exists for them yet.
+
+        sales_person_key is the salesperson who processed the transaction (Not Applicable for
+        online orders, which have none). The salesperson assigned to a reseller store is not a
+        key here: it stays an attribute of dim_store.
+
+        tax_amt and freight are order amounts, so they are not repeated on every line (they
+        would multiply on a SUM). Each order that has tax or freight gets ONE extra row
+        (is_order_charge = true) with product_key = '-2' (Not Applicable), NULL line measures
+        and sales_order_detail_id = -sales_order_id. Product lines carry NULL tax_amt and
+        freight. sub_total and total_due stay in gld_fct_order_items. Filter on
+        is_order_charge (or product_key) when counting lines or units.
+
+        A missing id never leaves a NULL key: it resolves to the dimension's 'Not Applicable'
+        row when the id is legitimately absent (no salesperson, no card, no store) and to its
+        'Missing' row when it should have been there. The fact has no default rows of its own:
+        a -1/-2 row would put sentinel numbers into the measures and skew every SUM.
+
+        store_key is the dim_store version in force on order_date: the latest version that
+        started on or before it, or the store's oldest version when the order predates them
+        all.
+
+        Type 1: incrementally merged on sales_order_detail_id, so a changed line overwrites its
+        existing row in place and no history is kept. Incremental runs re-select only lines
+        modified since the last run (the later of the line's and its order's modified date).
+
+    config:
+      meta:
+        atlan:
+          attributes:
+            ownerUsers: ["calfarol"]
+            ownerGroups: ["sales_adventure_works"]
+            certificateStatus: DRAFT
+            certificateStatusMessage: "Synced from dbt."
+          domainName: "Sales"
+          termNames:
+            - "Sales"
+          readme: |
+            # fct_order_lines
+
+            Gold fact of AdventureWorks sales order lines. One row per order line (equal to slv_dim_adventure_works_sales__sales_order_detail_join_header), reflecting only the current state of each line.
+
+            Star schema: FKs point only at conformed gold dimensions, always by surrogate key and never by the natural id. order_date, due_date and ship_date are FKs to adw_core's dim_date (role-playing). special_offer_id, ship_method_id and currency_rate_id are degenerate dimensions -- no gold dimension exists for them yet. SALES_PERSON_KEY is the salesperson who processed the transaction. PRODUCT_KEY points at ADW_PRODUCTION's gld_dim_product. The order-level amounts are not here, because repeated on every line they would multiply on a SUM.
+
+            A missing id resolves to the dimension's 'Not Applicable' row when it is legitimately absent and to its 'Missing' row when it should have been there. Never NULL. The fact has no default rows of its own.
+
+            Type 1: incrementally merged on sales_order_detail_id, so a changed line overwrites its existing row in place and no history is kept.
+
+            **Layer:** gold
+            **Subject area:** Sales
+
+            | Column | Description |
+            | --- | --- |
+            | ORDER_ITEMS_KEY | PK. Surrogate key of the line, inherited from silver (sales_order_detail_key), not recomputed in gold. |
+            | SALES_ORDER_DETAIL_ID | Natural key and grain: unique identifier of the order line. Merge key of the incremental model. |
+            | SALES_ORDER_ID | Degenerate dimension: the order the line belongs to. Recovered from the corrupted bronze column in silver. |
+            | SALES_ORDER_NUMBER | Order number shown to the customer. |
+            | PURCHASE_ORDER_NUMBER | Purchase order number the customer assigned. |
+            | ACCOUNT_NUMBER | Accounting account number tied to the sale. |
+            | REVISION_NUMBER | Revision number of the document. |
+            | ORDER_DATE | Date the order was placed. FK to adw_core's dim_date (role-playing). |
+            | DUE_DATE | Date the delivery was promised for. FK to adw_core's dim_date (role-playing). |
+            | SHIP_DATE | Date the order shipped. Null while it has not shipped. FK to adw_core's dim_date (role-playing) when not null. |
+            | ORDER_PROFILE_KEY | FK to dim_order_profile (status, channel, shipped flag). |
+            | CUSTOMER_KEY | FK to dim_client (client_key). |
+            | TERRITORY_KEY | FK to dim_territory. |
+            | BILL_TO_ADDRESS_KEY | FK to dim_address (billing role). |
+            | SHIP_TO_ADDRESS_KEY | FK to dim_address (shipping role). |
+            | SALES_PERSON_KEY | FK to dim_sales_person: the salesperson who processed the transaction. Not Applicable for online orders. |
+            | CREDIT_CARD_KEY | FK to dim_credit_card. Not Applicable when no card was used. |
+            | STORE_KEY | FK to dim_store (Type 2): the store version in force on order_date. Not Applicable for individual customers. |
+            | SPECIAL_OFFER_ID | Degenerate dimension. Promotion applied to the line. No gold dimension built for special offers yet. |
+            | SHIP_METHOD_ID | Degenerate dimension. No gold dimension built for shipping methods yet. |
+            | CURRENCY_RATE_ID | Degenerate dimension. Null for local currency. No gold dimension built for currency rates yet. |
+            | ORDER_QTY | Number of units ordered on the line. |
+            | UNIT_PRICE | Unit price applied on the line. |
+            | UNIT_PRICE_DISCOUNT | Discount applied to the unit price, as a decimal fraction. |
+            | LINE_TOTAL | Line total as delivered by the source (quantity times price net of discount). |
+            | ORDER_ITEM_MODIFIED_DATE | Latest change to the line or to its order. Watermark of the incremental load. |
+
+            _Synced automatically from dbt — edit the source .yml file in sf-adw-sales, not this README._
 
     columns:
-      - name: order_items_key
-        description: Surrogate key of the order line.
+
+      # --- keys ------------------------------------------------------------
+      - name: order_lines_key
+        description: "PK. Surrogate key of the line, inherited from silver (sales_order_detail_key, md5 of sales_order_detail_id), not recomputed in gold."
         data_tests:
           - unique
           - not_null
 
       - name: sales_order_detail_id
-        description: Natural ID of the sales order line (SalesOrderDetailID).
+        description: "Natural key and grain: unique identifier of the order line. Merge key of the incremental model. Negative (-sales_order_id) on the order-charge row."
         data_tests:
           - unique
           - not_null
 
+      # --- order identifiers (degenerate dimensions) ------------------------------
       - name: sales_order_id
-        description: Sales order ID (degenerate dimension).
+        description: "Degenerate dimension: the order the line belongs to. Recovered from the corrupted bronze column in silver."
+        data_tests:
+          - not_null
+
+      - name: is_order_charge
+        description: "True on the single extra row per order that carries tax_amt and freight (product_key Not Applicable, NULL line measures); false on every product line."
+        data_tests:
+          - not_null
 
       - name: sales_order_number
-        description: Sales order number (degenerate dimension).
+        description: "Sales order number shown to the customer."
 
       - name: purchase_order_number
-        description: Customer purchase order number (degenerate dimension).
+        description: "Purchase order number the customer assigned to the sale. Null for most online orders."
 
       - name: account_number
-        description: Order account number (degenerate dimension).
+        description: "Accounting account number tied to the sale."
 
       - name: revision_number
-        description: Order revision number.
+        description: "Revision number of the document. Incremented on every change."
 
+      # --- dates: role-playing FK to adw_core's dim_date, once per role ----------------
       - name: order_date
-        description: Order date.
+        description: "Date the order was placed. FK to adw_core's dim_date (role-playing: this is one of three roles the dimension plays on this fact)."
         data_tests:
           - relationships:
               arguments:
@@ -46,7 +148,7 @@ models:
                 field: date_key
 
       - name: due_date
-        description: Due date of the order.
+        description: "Date the delivery was promised for. FK to adw_core's dim_date (role-playing)."
         data_tests:
           - relationships:
               arguments:
@@ -54,30 +156,25 @@ models:
                 field: date_key
 
       - name: ship_date
-        description: Ship date. Can be null if the order has not shipped; nulls are not validated.
+        description: "Date the order shipped. Null while it has not shipped. FK to adw_core's dim_date (role-playing) when not null -- the relationships test ignores nulls."
         data_tests:
           - relationships:
               arguments:
                 to: ref('adw_core', 'gld_dim_date')
                 field: date_key
 
-      - name: is_shipped
-        description: Indicates whether the order has already shipped.
-
-      - name: order_status_code
-        description: Order status code.
-
-      - name: order_status_label
-        description: Order status description.
-
-      - name: is_online_order
-        description: Indicates whether the sale was online.
-
-      - name: order_channel
-        description: Order channel (online or store).
+      # --- foreign keys to conformed dimensions: surrogate keys, never ids ----------------
+      - name: order_profile_key
+        description: "FK to dim_order_profile (junk dimension of order status, sales channel and shipped flag): the same hash dim_order_profile mints over order_profile_id, which is computed from the status code, the channel and whether ship_date is set."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('gld_dim_order_profile')
+                field: order_profile_key
 
       - name: customer_key
-        description: Customer key. Points to gld_dim_client.
+        description: "FK to dim_client (client_key): the same hash dim_client mints over customer_id. 'Missing' when the order has no customer."
         data_tests:
           - not_null
           - relationships:
@@ -86,7 +183,7 @@ models:
                 field: client_key
 
       - name: territory_key
-        description: Sales territory key. Points to gld_dim_territory.
+        description: "FK to dim_territory: the same hash dim_territory mints over territory_id. 'Missing' when the order has no territory."
         data_tests:
           - not_null
           - relationships:
@@ -95,7 +192,7 @@ models:
                 field: territory_key
 
       - name: bill_to_address_key
-        description: Billing address key. Points to gld_dim_address.
+        description: "FK to dim_address, billing role: the same hash dim_address mints over address_id. 'Missing' when the order has no billing address."
         data_tests:
           - not_null
           - relationships:
@@ -104,7 +201,7 @@ models:
                 field: address_key
 
       - name: ship_to_address_key
-        description: Shipping address key. Points to gld_dim_address.
+        description: "FK to dim_address, shipping role: the same hash dim_address mints over address_id. 'Missing' when the order has no shipping address."
         data_tests:
           - not_null
           - relationships:
@@ -113,19 +210,25 @@ models:
                 field: address_key
 
       - name: sales_person_key
-        description: Salesperson key. Points to gld_dim_sales_person. 'Not Applicable' if the sale had no salesperson.
+        description: "FK to dim_sales_person: the salesperson who processed the transaction, the same hash dim_sales_person mints over business_entity_id. 'Not Applicable' for online orders, which have none."
         data_tests:
           - not_null
-        # relationships to gld_dim_sales_person: add when B is finished
+          - relationships:
+              arguments:
+                to: ref('gld_dim_sales_person')
+                field: sales_person_key
 
       - name: credit_card_key
-        description: Credit card key. Points to gld_dim_credit_card. 'Not Applicable' if not paid by credit card.
+        description: "FK to dim_credit_card: the same hash dim_credit_card mints over credit_card_id. 'Not Applicable' when no card was used."
         data_tests:
           - not_null
-        # relationships to gld_dim_credit_card: add when A is finished
+          - relationships:
+              arguments:
+                to: ref('gld_dim_credit_card')
+                field: credit_card_key
 
       - name: store_key
-        description: Key of the store version in effect on the order date (snapshot). 'Not Applicable' if the customer has no store, 'Missing' if no version was found.
+        description: "FK to dim_store (Type 2): the store VERSION in force on order_date -- the latest version that started on or before it, or the store's oldest version when the order predates them all. 'Not Applicable' when the customer is an individual with no store; 'Missing' when the customer has a store that is not in the snapshot."
         data_tests:
           - not_null
           - relationships:
@@ -133,26 +236,45 @@ models:
                 to: ref('gld_dim_store')
                 field: store_key
 
+      - name: product_key
+        description: "FK to gld_dim_product (ADW_PRODUCTION project): the same hash that dimension mints over product_id. '-1' (its Missing row) when a product line has no product; '-2' (its Not Applicable row) on the order-charge row."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('ADW_PRODUCTION', 'gld_dim_product')
+                field: product_key
+
+      # --- degenerate dimensions (no gold dimension built for these yet) ----------
       - name: special_offer_id
-        description: Applied special offer ID (degenerate dimension).
+        description: "Degenerate dimension. Promotion applied to the line, carried as a plain attribute since no gold dimension exists for special offers yet."
 
       - name: ship_method_id
-        description: Ship method ID (degenerate dimension).
+        description: "Degenerate dimension. Shipping method's natural key, carried as a plain attribute since no gold dimension exists for shipping methods yet."
 
       - name: currency_rate_id
-        description: Currency rate ID (degenerate dimension).
+        description: "Degenerate dimension. Exchange rate's natural key, carried as a plain attribute since no gold dimension exists for currency rates yet. Null for sales in local currency."
 
+      # --- line measures -----------------------------------------------------------
       - name: order_qty
-        description: Line quantity of units.
+        description: "Number of units ordered on the line."
 
       - name: unit_price
-        description: Line unit price.
+        description: "Unit price applied on the line."
 
       - name: unit_price_discount
-        description: Applied unit discount.
+        description: "Discount applied to the unit price, as a decimal fraction."
 
       - name: line_total
-        description: Line total (net price times quantity).
+        description: "Line total as delivered by the source (quantity times price net of discount). Not recomputed."
 
-      - name: order_item_modified_date
-        description: Line last modified date. Used for incremental loading.
+      # --- order charges -----------------------------------------------------------
+      - name: tax_amt
+        description: "Tax of the whole order. Only on the order-charge row; NULL on product lines."
+
+      - name: freight
+        description: "Freight of the whole order. Only on the order-charge row; NULL on product lines."
+
+      # --- audit -------------------------------------------------------------------
+      - name: order_line_modified_date
+        description: "Latest change to the line or to its order (the later of the two modified dates). Watermark of the incremental load."
