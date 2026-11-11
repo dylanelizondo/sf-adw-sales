@@ -17,8 +17,9 @@ models:
         (dim_credit_card), store_key (dim_store) and product_key (gld_dim_product, from the
         ADW_PRODUCTION project). order_date, due_date and ship_date are FKs
         to adw_core's dim_date, a role-playing dimension referenced three times; its grain is
-        the calendar date, so the date is its own key. special_offer_id, ship_method_id and
-        currency_rate_id are degenerate dimensions -- no gold dimension exists for them yet.
+        the calendar date, so the date is its own key. special_offer_key (dim_special_offer),
+        ship_method_key (dim_ship_method) and currency_rate_key (dim_currency_rate) close what
+        used to be degenerate dimensions.
 
         sales_person_key is the salesperson who processed the transaction (Not Applicable for
         online orders, which have none). The salesperson assigned to a reseller store is not a
@@ -245,15 +246,32 @@ models:
                 to: ref('ADW_PRODUCTION', 'gld_dim_product')
                 field: product_key
 
-      # --- degenerate dimensions (no gold dimension built for these yet) ----------
-      - name: special_offer_id
-        description: "Degenerate dimension. Promotion applied to the line, carried as a plain attribute since no gold dimension exists for special offers yet."
+      - name: special_offer_key
+        description: "FK to dim_special_offer: the same hash that dimension carries over special_offer_id. 'Not Applicable' on the order-charge row, which has no product and so no promotion."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('gld_dim_special_offer')
+                field: special_offer_key
 
-      - name: ship_method_id
-        description: "Degenerate dimension. Shipping method's natural key, carried as a plain attribute since no gold dimension exists for shipping methods yet."
+      - name: ship_method_key
+        description: "FK to dim_ship_method: the same hash that dimension carries over ship_method_id. 'Missing' when the order has no shipping method."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('gld_dim_ship_method')
+                field: ship_method_key
 
-      - name: currency_rate_id
-        description: "Degenerate dimension. Exchange rate's natural key, carried as a plain attribute since no gold dimension exists for currency rates yet. Null for sales in local currency."
+      - name: currency_rate_key
+        description: "FK to dim_currency_rate: the same hash dim_currency_rate mints over currency_rate_id. 'Not Applicable' for sales in local currency, which have no exchange rate."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('gld_dim_currency_rate')
+                field: currency_rate_key
 
       # --- line measures -----------------------------------------------------------
       - name: order_qty

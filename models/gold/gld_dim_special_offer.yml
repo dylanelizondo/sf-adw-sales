@@ -1,0 +1,58 @@
+version: 2
+
+models:
+  - name: gld_dim_special_offer
+    description: >
+        Gold dimension of AdventureWorks promotions. SCD Type 1 (dbt incremental, merge on
+        special_offer_id): one row per promotion, attributes overwritten in place. Straight
+        select from slv_adventure_works_sales__special_offer with no JOINs. special_offer_key is
+        the surrogate key silver already minted over special_offer_id, inherited and not
+        recomputed; the fact recomputes the same hash from special_offer_id. A post_hook
+        (upsert_default_rows) adds two default rows, special_offer_id -1 (Missing) and -2 (Not
+        Applicable); the order-charge row of the fact, which has no product and so no promotion,
+        points at the -2 row. The discount percentage and the quantity range are NULL on the
+        default rows. Built as DIM_SPECIAL_OFFER in Snowflake.
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: special_offer_key
+        description: "PK. Surrogate key inherited from silver (md5 of special_offer_id). The default rows carry the literal text 'Missing' (-1) and 'Not Applicable' (-2)."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: special_offer_id
+        description: "Natural key, special_offer_id of SALES.SPECIAL_OFFER. Merge key of the incremental model. -1 and -2 are the default rows."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- promotion ---------------------------------------------------------
+      - name: special_offer_description
+        description: "Description of the promotion. 'Missing' / 'Not Applicable' on the default rows."
+
+      - name: special_offer_type
+        description: "Kind of promotion, for example Volume Discount or Seasonal Discount. 'Missing' / 'Not Applicable' on the default rows."
+
+      - name: special_offer_category
+        description: "Who the promotion is aimed at, for example Reseller or Customer. 'Missing' / 'Not Applicable' on the default rows."
+
+      - name: special_offer_discount_pct
+        description: "Discount as a decimal fraction. NULL on the default rows."
+
+      - name: special_offer_min_qty
+        description: "Minimum quantity the promotion applies to. NULL on the default rows."
+
+      - name: special_offer_max_qty
+        description: "Maximum quantity the promotion applies to. NULL when there is no upper limit and on the default rows."
+
+      - name: special_offer_start_date
+        description: "First day the promotion is valid. 1900-01-01 on the default rows."
+
+      - name: special_offer_end_date
+        description: "Last day the promotion is valid. 1900-01-01 on the default rows."
+
+      # --- audit -------------------------------------------------------------
+      - name: special_offer_modified_date
+        description: "Last change to the promotion in the source system. 1900-01-01 on the default rows."

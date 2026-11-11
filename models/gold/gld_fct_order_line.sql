@@ -29,8 +29,10 @@
 -- (its account manager) stays an attribute of dim_store.
 -- order_date/due_date/ship_date are FKs too, all three against adw_core's dim_date -- a
 -- role-playing dimension whose grain is the literal calendar date, so the date is its own key.
--- special_offer_id, ship_method_id and currency_rate_id are degenerate dimensions: no gold
--- dimension exists for them yet.
+-- special_offer_key, ship_method_key and currency_rate_key point at dim_special_offer,
+-- dim_ship_method and dim_currency_rate by surrogate key. The order-charge row has no product, so
+-- its special_offer_key is Not Applicable; an order sold in local currency has no exchange rate,
+-- so its currency_rate_key is Not Applicable too.
 -- product_key points at ADW_PRODUCTION's gld_dim_product (another dbt Mesh project): the same hash
 -- that dimension mints over product_id. Its default rows are keyed '-1' / '-2', not the
 -- 'Missing' / 'Not Applicable' text of this project's dimensions, so it does not use
@@ -259,6 +261,14 @@ select
         else {{ fact_foreign_key('i.sales_person_id', 'missing') }}
     end                                                              as sales_person_key,
     {{ fact_foreign_key('i.credit_card_id', 'not_applicable') }}     as credit_card_key,
+    {{ fact_foreign_key('i.ship_method_id') }}                       as ship_method_key,
+    -- sold in local currency: no exchange rate, so Not Applicable
+    {{ fact_foreign_key('i.currency_rate_id', 'not_applicable') }}   as currency_rate_key,
+    -- the order-charge row has no product, so no promotion: Not Applicable
+    case
+        when i.is_order_charge then {{ default_row_key('not_applicable') }}
+        else {{ fact_foreign_key('i.special_offer_id') }}
+    end                                                              as special_offer_key,
     -- gld_dim_product (ADW_PRODUCTION) keys its default rows '-1' / '-2'
     -- the order-charge row has no product: Not Applicable
     case
