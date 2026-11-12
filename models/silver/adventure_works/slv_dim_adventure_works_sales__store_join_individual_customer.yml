@@ -1,0 +1,81 @@
+version: 2
+
+models:
+  - name: slv_dim_adventure_works_sales__store_join_individual_customer
+    description: >
+        Every AdventureWorks customer with the attributes of whoever is behind it, flattened so
+        gold can select straight from it. One row per customer, equal to
+        slv_adventure_works_sales__customer. A store customer gets its name from
+        slv_dim_adventure_works_sales__store_join_person; an individual customer gets its name
+        and survey demographics from adw_core's slv_adventure_works_person__person. Both are left
+        joins, so a customer is never dropped, and a customer with neither a store nor a person
+        gets the name 'Unknown'. The demographic columns are null for stores. Feeds gld_dim_client.
+        No surrogate key is minted here: gold mints client_key over customer_id.
+
+    columns:
+
+      # --- keys ------------------------------------------------------------
+      - name: customer_id
+        description: "PK. Natural key. Unique identifier of the customer in the source system."
+        data_tests:
+          - unique
+          - not_null
+
+      # --- client ----------------------------------------------------------
+      - name: client_type
+        description: "Client classification from silver. INDIVIDUAL when only a person is set, STORE when a store is set (a store wins over a person for the 635 ambiguous rows), UNKNOWN when neither is set."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["STORE", "INDIVIDUAL", "UNKNOWN"]
+
+      - name: client_name
+        description: "Display name: the store name for STORE clients, the person's full name for INDIVIDUAL clients, 'Unknown' when neither is available."
+        data_tests:
+          - not_null
+
+      - name: client_account_number
+        description: "Customer account number, derived in the source system. Surfaced as-is; do not use it as a key."
+
+      # --- individual clients only (null for stores) -----------------------
+      - name: client_has_demographics_survey
+        description: "True when the individual's survey holds real answers rather than an empty form. Null for stores."
+
+      - name: client_age_band
+        description: "Banded age derived from the survey birth date; the raw birth date is not exposed. Self-reported. Individuals with a survey only."
+
+      - name: client_education
+        description: "Highest education band reached, from Partial High School to Graduate Degree. Self-reported."
+
+      - name: client_education_sort
+        description: "Display order for client_education, 1 to 5."
+
+      - name: client_occupation
+        description: "Occupation category: Clerical, Manual, Skilled Manual, Professional or Management. Self-reported."
+
+      - name: client_total_children
+        description: "Total number of children. Self-reported."
+
+      - name: client_number_cars_owned
+        description: "Number of cars owned. Self-reported."
+
+      - name: client_is_home_owner
+        description: "Home ownership. Self-reported."
+
+      # --- foreign keys ----------------------------------------------------
+      - name: store_id
+        description: "FK to the reseller store behind a store customer (business_entity_id). Null for individuals."
+
+      - name: person_id
+        description: "FK to the person behind an individual customer (business_entity_id in adw_core's slv_adventure_works_person__person). Null for store-only customers."
+
+      - name: territory_id
+        description: "Sales territory of the customer. Null when the customer has none."
+
+      - name: primary_address_id
+        description: "Primary address of the individual customer. Null for stores."
+
+      # --- audit -----------------------------------------------------------
+      - name: client_modified_date
+        description: "Last change to the customer record in the source system."
