@@ -2,8 +2,7 @@
     config(
         materialized='semantic_view',
         alias='sv_sales',
-        copy_grants=true,
-        persist_docs={'relation': false, 'columns': false}
+        copy_grants=true
     )
 }}
 
