@@ -100,6 +100,7 @@ TABLES (
 )
 
 RELATIONSHIPS (
+    --sold_to_client
     items_to_clients AS items (customer_key) REFERENCES clients,
     items_to_territories AS items (territory_key) REFERENCES territories,
     items_to_bill_to AS items (bill_to_address_key) REFERENCES bill_to,
@@ -118,12 +119,13 @@ RELATIONSHIPS (
 )
 
 FACTS (
-    items.order_qty_fact AS order_qty COMMENT = 'Units sold on the order line',
-    items.unit_price_fact AS unit_price COMMENT = 'List price per unit before discount',
-    items.unit_price_discount_fact AS unit_price_discount COMMENT = 'Discount applied per unit, as a fraction of the unit price',
-    items.line_total_fact AS line_total COMMENT = 'Net amount of the order line after discount',
-    items.tax_amt_fact AS tax_amt COMMENT = 'Order tax, only on charge rows',
-    items.freight_fact AS freight COMMENT = 'Order freight, only on charge rows'
+    --private
+    PRIVATE items.order_qty_fact AS order_qty COMMENT = 'Units sold on the order line',
+    PRIVATE items.unit_price_fact AS unit_price COMMENT = 'List price per unit before discount',
+    PRIVATE items.unit_price_discount_fact AS unit_price_discount COMMENT = 'Discount applied per unit, as a fraction of the unit price',
+    PRIVATE items.line_total_fact AS line_total COMMENT = 'Net amount of the order line after discount',
+    PRIVATE items.tax_amt_fact AS tax_amt COMMENT = 'Order tax, only on charge rows',
+    PRIVATE items.freight_fact AS freight COMMENT = 'Order freight, only on charge rows'
 )
 
 DIMENSIONS (
