@@ -19,7 +19,10 @@
 --     generated DDL. If compile/run fails with "unexpected 'AI_SQL_GENERATION'", see the README
 --     note for this model.
 --   * Product comes from the ADW_PRODUCTION mesh project (gld_dim_product).
---   * Not included yet: store (Type 2) and dim_date.
+--   * Store is the Type 2 snapshot gld_dim_store: the fact's store_key points at the store VERSION in
+--     force on the order date, so group by store_id (stable) plus store_name.
+--   * Dates come from adw_core's gld_dim_date, joined three times (role-playing): order_dates,
+--     due_dates and ship_dates. ship_date is NULL until the order ships.
 --   * Charge rows (is_order_charge = true) carry only tax_amt and freight; product lines carry
 --     only the line measures. Metrics are defined so they never mix the two.
 
@@ -76,7 +79,24 @@ TABLES (
     products AS {{ ref('ADW_PRODUCTION', 'gld_dim_product') }}
         PRIMARY KEY (product_key)
         WITH SYNONYMS = ('items sold', 'merchandise')
-        COMMENT = 'Products sold (from the ADW_PRODUCTION project). Charge rows have no product'
+        COMMENT = 'Products sold (from the ADW_PRODUCTION project). Charge rows have no product',
+
+    stores AS {{ ref('gld_dim_store') }}
+        PRIMARY KEY (store_key)
+        WITH SYNONYMS = ('resellers', 'shops', 'retailers')
+        COMMENT = 'Reseller stores (Type 2: one row per store version). Individual customers have store Not Applicable',
+
+    order_dates AS {{ ref('adw_core', 'gld_dim_date') }}
+        PRIMARY KEY (date_key)
+        COMMENT = 'Calendar for the date the order was placed',
+
+    due_dates AS {{ ref('adw_core', 'gld_dim_date') }}
+        PRIMARY KEY (date_key)
+        COMMENT = 'Calendar for the date the order is due',
+
+    ship_dates AS {{ ref('adw_core', 'gld_dim_date') }}
+        PRIMARY KEY (date_key)
+        COMMENT = 'Calendar for the date the order shipped'
 )
 
 RELATIONSHIPS (
@@ -90,7 +110,11 @@ RELATIONSHIPS (
     items_to_offers AS items (special_offer_key) REFERENCES offers,
     items_to_ship_methods AS items (ship_method_key) REFERENCES ship_methods,
     items_to_rates AS items (currency_rate_key) REFERENCES rates,
-    items_to_products AS items (product_key) REFERENCES products
+    items_to_products AS items (product_key) REFERENCES products,
+    items_to_stores AS items (store_key) REFERENCES stores,
+    items_to_order_dates AS items (order_date) REFERENCES order_dates,
+    items_to_due_dates AS items (due_date) REFERENCES due_dates,
+    items_to_ship_dates AS items (ship_date) REFERENCES ship_dates
 )
 
 FACTS (
@@ -118,12 +142,54 @@ DIMENSIONS (
         COMMENT = 'Date the order is due',
     items.ship_date AS ship_date
         COMMENT = 'Date the order shipped; NULL if not shipped yet',
-    items.order_year AS YEAR(order_date)
+
+    -- order date calendar ---------------------------------------------------------
+    order_dates.order_year AS order_dates.year
+        WITH SYNONYMS = ('year', 'sales year')
         COMMENT = 'Calendar year of the order date',
-    items.order_month AS MONTH(order_date)
-        COMMENT = 'Calendar month number (1-12) of the order date',
-    items.order_quarter AS QUARTER(order_date)
+    order_dates.order_quarter AS order_dates.quarter
+        WITH SYNONYMS = ('quarter')
         COMMENT = 'Calendar quarter (1-4) of the order date',
+    order_dates.order_month AS order_dates.month
+        COMMENT = 'Calendar month number (1-12) of the order date',
+    order_dates.order_month_name AS order_dates.monthname
+        WITH SYNONYMS = ('month')
+        COMMENT = 'Month name of the order date (e.g. Jan, Feb)',
+    order_dates.order_week AS order_dates.weekofyear
+        COMMENT = 'Week of the year of the order date',
+    order_dates.order_day_name AS order_dates.dayname
+        WITH SYNONYMS = ('weekday', 'day of week')
+        COMMENT = 'Day of the week of the order date (e.g. Mon, Tue)',
+    order_dates.order_month_end AS order_dates.last_day_of_month
+        COMMENT = 'Last day of the month of the order date, to group by month as a date',
+
+    -- due and ship date calendars ---------------------------------------------------
+    due_dates.due_year AS due_dates.year COMMENT = 'Calendar year of the due date',
+    due_dates.due_month AS due_dates.month COMMENT = 'Calendar month number of the due date',
+    ship_dates.ship_year AS ship_dates.year COMMENT = 'Calendar year of the ship date; NULL if not shipped',
+    ship_dates.ship_month AS ship_dates.month COMMENT = 'Calendar month number of the ship date; NULL if not shipped',
+
+    -- stores -----------------------------------------------------------------------
+    stores.store_id AS store_id
+        COMMENT = 'Stable store id, the same across all versions of a store',
+    stores.store_name AS store_name
+        WITH SYNONYMS = ('store', 'reseller', 'shop')
+        COMMENT = 'Store name',
+    stores.store_business_type AS store_business_type
+        WITH SYNONYMS = ('business type')
+        COMMENT = 'Type of business of the store',
+    stores.store_specialty AS store_specialty
+        WITH SYNONYMS = ('specialty')
+        COMMENT = 'What the store specializes in selling',
+    stores.store_year_opened AS store_year_opened
+        COMMENT = 'Year the store opened',
+    stores.store_square_feet AS store_square_feet
+        COMMENT = 'Store size in square feet',
+    stores.store_number_employees AS store_number_employees
+        COMMENT = 'Number of employees of the store',
+    stores.store_account_manager AS sales_person_full_name
+        WITH SYNONYMS = ('account manager')
+        COMMENT = 'Salesperson assigned to manage the store. Not the person who processed the sale',
 
     -- order profile --------------------------------------------------------------
     profiles.order_status AS order_status_label
@@ -238,6 +304,6 @@ METRICS (
 
 COMMENT = 'Sales semantic view: order lines, tax and freight with customers, territories, salespeople, promotions and shipping. Source of truth for sales metrics in Cortex Analyst.'
 
-AI_SQL_GENERATION 'Total sales, revenue and net sales mean total_sales, which sums line totals after discount and excludes tax and freight. Use total_tax and total_freight for those amounts. Charge rows (is_order_charge = TRUE) hold only tax and freight, so never count them as order lines; use line_count for lines and order_count for orders. A salesperson is the person who processed the sale, not the store account manager. Online orders have no salesperson. Round currency amounts to 2 decimal places. For product rankings use product_name with total_sales; charge rows have no product and carry no line sales. For any top-N or ranking, exclude rows where the ranked measure is NULL (or where the dimension is Not Applicable or Missing) and order with NULLS LAST. Do not add a date filter unless the user asks for a period; when asked about trends, group by order_year and order_month.'
+AI_SQL_GENERATION 'Total sales, revenue and net sales mean total_sales, which sums line totals after discount and excludes tax and freight. Use total_tax and total_freight for those amounts. Charge rows (is_order_charge = TRUE) hold only tax and freight, so never count them as order lines; use line_count for lines and order_count for orders. A salesperson is the person who processed the sale, not the store account manager. Online orders have no salesperson. Round currency amounts to 2 decimal places. For product rankings use product_name with total_sales; charge rows have no product and carry no line sales. For any top-N or ranking, exclude rows where the ranked measure is NULL (or where the dimension is Not Applicable or Missing) and order with NULLS LAST. A store is a reseller customer; individual customers have the store Not Applicable, so exclude it from store rankings. Store data is versioned, so group stores by store_id and store_name, and never use store_account_manager when the user asks who sold. Use the order date calendar (order_year, order_quarter, order_month, order_month_name) unless the user mentions the ship date or due date, then use ship_year or due_year. Do not add a date filter unless the user asks for a period, and do not assume what the current or last year is: the data covers 2022 to 2025, so for relative periods use the latest order_year available. When asked about trends, group by order_year and order_month.'
 
-AI_QUESTION_CATEGORIZATION 'This view answers questions about sales orders: sales amounts, quantities, discounts, tax, freight, customers, territories, salespeople, promotions, payment cards and shipping. Product cost, inventory, production, purchasing, finance and HR questions are out of scope; say they cannot be answered from this view. Product names, numbers, categories and subcategories are available for slicing sales. If a question asks about stores, say store details are not available yet. If the question is ambiguous about the measure (for example just "how much"), ask whether the user means net sales, quantity or order count.'
+AI_QUESTION_CATEGORIZATION 'This view answers questions about sales orders: sales amounts, quantities, discounts, tax, freight, customers, territories, salespeople, promotions, payment cards and shipping. Product cost, inventory, production, purchasing, finance and HR questions are out of scope; say they cannot be answered from this view. Product names, numbers, categories and subcategories are available for slicing sales. Store names, types, specialties, sizes and account managers are available for slicing sales, and so are order, due and ship dates by year, quarter, month and weekday. If the question is ambiguous about the measure (for example just "how much"), ask whether the user means net sales, quantity or order count.'
