@@ -19,7 +19,8 @@
 --   * dbt_semantic_view issue #20: the package may place these AI_* clauses wrongly in the
 --     generated DDL. If compile/run fails with "unexpected 'AI_SQL_GENERATION'", see the README
 --     note for this model.
---   * Not included yet: product (ADW_PRODUCTION mesh project), store (Type 2) and dim_date.
+--   * Product comes from the ADW_PRODUCTION mesh project (gld_dim_product).
+--   * Not included yet: store (Type 2) and dim_date.
 --   * Charge rows (is_order_charge = true) carry only tax_amt and freight; product lines carry
 --     only the line measures. Metrics are defined so they never mix the two.
 
@@ -71,7 +72,12 @@ TABLES (
 
     rates AS {{ ref('gld_dim_currency_rate') }}
         PRIMARY KEY (currency_rate_key)
-        COMMENT = 'Currency exchange rates for orders not sold in local currency'
+        COMMENT = 'Currency exchange rates for orders not sold in local currency',
+
+    products AS {{ ref('ADW_PRODUCTION', 'gld_dim_product') }}
+        PRIMARY KEY (product_key)
+        WITH SYNONYMS = ('items sold', 'merchandise')
+        COMMENT = 'Products sold (from the ADW_PRODUCTION project). Charge rows have no product'
 )
 
 RELATIONSHIPS (
@@ -84,7 +90,8 @@ RELATIONSHIPS (
     items_to_profiles AS items (order_profile_key) REFERENCES profiles,
     items_to_offers AS items (special_offer_key) REFERENCES offers,
     items_to_ship_methods AS items (ship_method_key) REFERENCES ship_methods,
-    items_to_rates AS items (currency_rate_key) REFERENCES rates
+    items_to_rates AS items (currency_rate_key) REFERENCES rates,
+    items_to_products AS items (product_key) REFERENCES products
 )
 
 FACTS (
@@ -168,6 +175,21 @@ DIMENSIONS (
         WITH SYNONYMS = ('salesperson', 'seller', 'rep')
         COMMENT = 'Salesperson who processed the sale',
 
+    -- products ---------------------------------------------------------------------
+    products.product_name AS product_name
+        WITH SYNONYMS = ('product', 'item')
+        COMMENT = 'Product name',
+    products.product_number AS product_number
+        COMMENT = 'Product number (SKU)',
+    products.category_name AS category_name
+        WITH SYNONYMS = ('product category', 'category')
+        COMMENT = 'Product category (e.g. Bikes, Components, Clothing, Accessories)',
+    products.subcategory_name AS subcategory_name
+        WITH SYNONYMS = ('product subcategory', 'subcategory')
+        COMMENT = 'Product subcategory',
+    products.model_name AS model_name
+        COMMENT = 'Product model name',
+
     -- payment, promotion, shipping, currency ---------------------------------------
     cards.card_type AS card_type
         WITH SYNONYMS = ('payment method')
@@ -217,6 +239,6 @@ METRICS (
 
 COMMENT = 'Sales semantic view: order lines, tax and freight with customers, territories, salespeople, promotions and shipping. Source of truth for sales metrics in Cortex Analyst.'
 
-AI_SQL_GENERATION 'Total sales, revenue and net sales mean total_sales, which sums line totals after discount and excludes tax and freight. Use total_tax and total_freight for those amounts. Charge rows (is_order_charge = TRUE) hold only tax and freight, so never count them as order lines; use line_count for lines and order_count for orders. A salesperson is the person who processed the sale, not the store account manager. Online orders have no salesperson. Round currency amounts to 2 decimal places. Do not add a date filter unless the user asks for a period; when asked about trends, group by order_year and order_month.'
+AI_SQL_GENERATION 'Total sales, revenue and net sales mean total_sales, which sums line totals after discount and excludes tax and freight. Use total_tax and total_freight for those amounts. Charge rows (is_order_charge = TRUE) hold only tax and freight, so never count them as order lines; use line_count for lines and order_count for orders. A salesperson is the person who processed the sale, not the store account manager. Online orders have no salesperson. Round currency amounts to 2 decimal places. For product rankings use product_name with total_sales; charge rows have no product and carry no line sales. Do not add a date filter unless the user asks for a period; when asked about trends, group by order_year and order_month.'
 
-AI_QUESTION_CATEGORIZATION 'This view answers questions about sales orders: sales amounts, quantities, discounts, tax, freight, customers, territories, salespeople, promotions, payment cards and shipping. Product catalog, product cost, inventory, production, purchasing, finance and HR questions are out of scope; say they cannot be answered from this view. If a question asks about products or stores, say product and store details are not available yet. If the question is ambiguous about the measure (for example just "how much"), ask whether the user means net sales, quantity or order count.'
+AI_QUESTION_CATEGORIZATION 'This view answers questions about sales orders: sales amounts, quantities, discounts, tax, freight, customers, territories, salespeople, promotions, payment cards and shipping. Product cost, inventory, production, purchasing, finance and HR questions are out of scope; say they cannot be answered from this view. Product names, numbers, categories and subcategories are available for slicing sales. If a question asks about stores, say store details are not available yet. If the question is ambiguous about the measure (for example just "how much"), ask whether the user means net sales, quantity or order count.'
