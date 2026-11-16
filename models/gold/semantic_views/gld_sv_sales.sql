@@ -27,7 +27,7 @@
 --     only the line measures. Metrics are defined so they never mix the two.
 
 TABLES (
-    items AS {{ ref('gld_fct_order_line') }}
+    order_lines AS {{ ref('gld_fct_order_line') }}
         PRIMARY KEY (order_lines_key)
         COMMENT = 'One row per sales order line, plus one charge row per order with tax or freight',
 
@@ -41,11 +41,11 @@ TABLES (
         WITH SYNONYMS = ('regions', 'sales territories')
         COMMENT = 'Sales territories',
 
-    bill_to AS {{ ref('gld_dim_address') }}
+    billing_addresses AS {{ ref('gld_dim_address') }}
         PRIMARY KEY (address_key)
         COMMENT = 'Billing address of the order',
 
-    ship_to AS {{ ref('gld_dim_address') }}
+    shipping_addresses AS {{ ref('gld_dim_address') }}
         PRIMARY KEY (address_key)
         COMMENT = 'Shipping address of the order',
 
@@ -54,25 +54,25 @@ TABLES (
         WITH SYNONYMS = ('salespeople', 'sellers', 'reps')
         COMMENT = 'Salesperson who processed the sale (not the store account manager)',
 
-    cards AS {{ ref('gld_dim_credit_card') }}
+    payment_cards AS {{ ref('gld_dim_credit_card') }}
         PRIMARY KEY (credit_card_key)
         COMMENT = 'Credit card used to pay the order',
 
-    profiles AS {{ ref('gld_dim_order_profile') }}
+    order_profiles AS {{ ref('gld_dim_order_profile') }}
         PRIMARY KEY (order_profile_key)
         COMMENT = 'Order status, sales channel and shipped flag',
 
-    offers AS {{ ref('gld_dim_special_offer') }}
+    special_offers AS {{ ref('gld_dim_special_offer') }}
         PRIMARY KEY (special_offer_key)
         WITH SYNONYMS = ('promotions', 'discount programs')
         COMMENT = 'Special offers applied to order lines',
 
-    ship_methods AS {{ ref('gld_dim_ship_method') }}
+    shipping_methods AS {{ ref('gld_dim_ship_method') }}
         PRIMARY KEY (ship_method_key)
         WITH SYNONYMS = ('carriers', 'shipping methods')
         COMMENT = 'Shipping methods',
 
-    rates AS {{ ref('gld_dim_currency_rate') }}
+    currency_rates AS {{ ref('gld_dim_currency_rate') }}
         PRIMARY KEY (currency_rate_key)
         COMMENT = 'Currency exchange rates for orders not sold in local currency',
 
@@ -100,49 +100,48 @@ TABLES (
 )
 
 RELATIONSHIPS (
-    --sold_to_client
-    items_to_clients AS items (customer_key) REFERENCES clients,
-    items_to_territories AS items (territory_key) REFERENCES territories,
-    items_to_bill_to AS items (bill_to_address_key) REFERENCES bill_to,
-    items_to_ship_to AS items (ship_to_address_key) REFERENCES ship_to,
-    items_to_sales_people AS items (sales_person_key) REFERENCES sales_people,
-    items_to_cards AS items (credit_card_key) REFERENCES cards,
-    items_to_profiles AS items (order_profile_key) REFERENCES profiles,
-    items_to_offers AS items (special_offer_key) REFERENCES offers,
-    items_to_ship_methods AS items (ship_method_key) REFERENCES ship_methods,
-    items_to_rates AS items (currency_rate_key) REFERENCES rates,
-    items_to_products AS items (product_key) REFERENCES products,
-    items_to_stores AS items (store_key) REFERENCES stores,
-    items_to_order_dates AS items (order_date) REFERENCES order_dates,
-    items_to_due_dates AS items (due_date) REFERENCES due_dates,
-    items_to_ship_dates AS items (ship_date) REFERENCES ship_dates
+    sold_to_client AS order_lines (customer_key) REFERENCES clients,
+    sold_in_territory AS order_lines (territory_key) REFERENCES territories,
+    billed_to_address AS order_lines (bill_to_address_key) REFERENCES billing_addresses,
+    shipped_to_address AS order_lines (ship_to_address_key) REFERENCES shipping_addresses,
+    sold_by_sales_person AS order_lines (sales_person_key) REFERENCES sales_people,
+    paid_with_card AS order_lines (credit_card_key) REFERENCES payment_cards,
+    described_by_order_profile AS order_lines (order_profile_key) REFERENCES order_profiles,
+    discounted_by_offer AS order_lines (special_offer_key) REFERENCES special_offers,
+    delivered_by_ship_method AS order_lines (ship_method_key) REFERENCES shipping_methods,
+    converted_at_rate AS order_lines (currency_rate_key) REFERENCES currency_rates,
+    includes_product AS order_lines (product_key) REFERENCES products,
+    sold_at_store AS order_lines (store_key) REFERENCES stores,
+    placed_on_date AS order_lines (order_date) REFERENCES order_dates,
+    due_on_date AS order_lines (due_date) REFERENCES due_dates,
+    shipped_on_date AS order_lines (ship_date) REFERENCES ship_dates
 )
 
 FACTS (
     --private
-    PRIVATE items.order_qty_fact AS order_qty COMMENT = 'Units sold on the order line',
-    PRIVATE items.unit_price_fact AS unit_price COMMENT = 'List price per unit before discount',
-    PRIVATE items.unit_price_discount_fact AS unit_price_discount COMMENT = 'Discount applied per unit, as a fraction of the unit price',
-    PRIVATE items.line_total_fact AS line_total COMMENT = 'Net amount of the order line after discount',
-    PRIVATE items.tax_amt_fact AS tax_amt COMMENT = 'Order tax, only on charge rows',
-    PRIVATE items.freight_fact AS freight COMMENT = 'Order freight, only on charge rows'
+    PRIVATE order_lines.order_qty_fact AS order_qty COMMENT = 'Units sold on the order line',
+    PRIVATE order_lines.unit_price_fact AS unit_price COMMENT = 'List price per unit before discount',
+    PRIVATE order_lines.unit_price_discount_fact AS unit_price_discount COMMENT = 'Discount applied per unit, as a fraction of the unit price',
+    PRIVATE order_lines.line_total_fact AS line_total COMMENT = 'Net amount of the order line after discount',
+    PRIVATE order_lines.tax_amt_fact AS tax_amt COMMENT = 'Order tax, only on charge rows',
+    PRIVATE order_lines.freight_fact AS freight COMMENT = 'Order freight, only on charge rows'
 )
 
 DIMENSIONS (
     -- orders -------------------------------------------------------------------
-    items.sales_order_number AS sales_order_number
+    order_lines.sales_order_number AS sales_order_number
         WITH SYNONYMS = ('order number', 'SO number')
         COMMENT = 'Sales order number',
-    items.purchase_order_number AS purchase_order_number
+    order_lines.purchase_order_number AS purchase_order_number
         COMMENT = 'Customer purchase order number',
-    items.is_order_charge AS is_order_charge
+    order_lines.is_order_charge AS is_order_charge
         COMMENT = 'TRUE for the tax and freight charge row of an order; FALSE for product lines',
-    items.order_date AS order_date
+    order_lines.order_date AS order_date
         WITH SYNONYMS = ('date of order', 'purchase date')
         COMMENT = 'Date the order was placed',
-    items.due_date AS due_date
+    order_lines.due_date AS due_date
         COMMENT = 'Date the order is due',
-    items.ship_date AS ship_date
+    order_lines.ship_date AS ship_date
         COMMENT = 'Date the order shipped; NULL if not shipped yet',
 
     -- order date calendar ---------------------------------------------------------
@@ -152,12 +151,12 @@ DIMENSIONS (
     order_dates.order_quarter AS order_dates.quarter
         WITH SYNONYMS = ('quarter')
         COMMENT = 'Calendar quarter (1-4) of the order date',
-    order_dates.order_month AS order_dates.month
+    order_dates.order_month_number AS order_dates.month
         COMMENT = 'Calendar month number (1-12) of the order date',
     order_dates.order_month_name AS order_dates.monthname
         WITH SYNONYMS = ('month')
         COMMENT = 'Month name of the order date (e.g. Jan, Feb)',
-    order_dates.order_week AS order_dates.weekofyear
+    order_dates.order_week_of_year AS order_dates.weekofyear
         COMMENT = 'Week of the year of the order date',
     order_dates.order_day_name AS order_dates.dayname
         WITH SYNONYMS = ('weekday', 'day of week')
@@ -166,10 +165,10 @@ DIMENSIONS (
         COMMENT = 'Last day of the month of the order date, to group by month as a date',
 
     -- due and ship date calendars ---------------------------------------------------
-    due_dates.due_year AS due_dates.year COMMENT = 'Calendar year of the due date',
-    due_dates.due_month AS due_dates.month COMMENT = 'Calendar month number of the due date',
-    ship_dates.ship_year AS ship_dates.year COMMENT = 'Calendar year of the ship date; NULL if not shipped',
-    ship_dates.ship_month AS ship_dates.month COMMENT = 'Calendar month number of the ship date; NULL if not shipped',
+    due_dates.due_date_year AS due_dates.year COMMENT = 'Calendar year of the due date',
+    due_dates.due_date_month AS due_dates.month COMMENT = 'Calendar month number of the due date',
+    ship_dates.ship_date_year AS ship_dates.year COMMENT = 'Calendar year of the ship date; NULL if not shipped',
+    ship_dates.ship_date_month AS ship_dates.month COMMENT = 'Calendar month number of the ship date; NULL if not shipped',
 
     -- stores -----------------------------------------------------------------------
     stores.store_id AS store_id
@@ -194,13 +193,13 @@ DIMENSIONS (
         COMMENT = 'Salesperson assigned to manage the store. Not the person who processed the sale',
 
     -- order profile --------------------------------------------------------------
-    profiles.order_status AS order_status_label
+    order_profiles.order_status AS order_status_label
         WITH SYNONYMS = ('status')
         COMMENT = 'Order status',
-    profiles.order_channel AS order_channel
+    order_profiles.order_channel AS order_channel
         WITH SYNONYMS = ('channel', 'sales channel')
         COMMENT = 'Sales channel: online or offline',
-    profiles.is_shipped AS is_shipped
+    order_profiles.is_order_shipped AS is_shipped
         COMMENT = 'Whether the order has shipped',
 
     -- clients --------------------------------------------------------------------
@@ -216,7 +215,7 @@ DIMENSIONS (
         COMMENT = 'Education level of individual customers',
     clients.client_occupation AS client_occupation
         COMMENT = 'Occupation of individual customers',
-    clients.client_is_home_owner AS client_is_home_owner
+    clients.client_owns_home AS client_is_home_owner
         COMMENT = 'Whether the individual customer owns a home',
 
     -- territories ----------------------------------------------------------------
@@ -226,19 +225,19 @@ DIMENSIONS (
     territories.territory_group AS territory_group
         WITH SYNONYMS = ('region group', 'geography')
         COMMENT = 'Group the territory belongs to (e.g. North America, Europe, Pacific)',
-    territories.territory_country AS country_region_code
+    territories.territory_country_code AS country_region_code
         COMMENT = 'Country or region code of the territory',
 
     -- addresses ------------------------------------------------------------------
-    bill_to.bill_to_city AS city COMMENT = 'Billing city',
-    bill_to.bill_to_state AS state_province_name COMMENT = 'Billing state or province',
-    bill_to.bill_to_country AS country_region_code COMMENT = 'Billing country or region code',
-    ship_to.ship_to_city AS city COMMENT = 'Shipping city',
-    ship_to.ship_to_state AS state_province_name COMMENT = 'Shipping state or province',
-    ship_to.ship_to_country AS country_region_code COMMENT = 'Shipping country or region code',
+    billing_addresses.billing_city AS city COMMENT = 'Billing city',
+    billing_addresses.billing_state AS state_province_name COMMENT = 'Billing state or province',
+    billing_addresses.billing_country AS country_region_code COMMENT = 'Billing country or region code',
+    shipping_addresses.shipping_city AS city COMMENT = 'Shipping city',
+    shipping_addresses.shipping_state AS state_province_name COMMENT = 'Shipping state or province',
+    shipping_addresses.shipping_country AS country_region_code COMMENT = 'Shipping country or region code',
 
     -- salesperson ----------------------------------------------------------------
-    sales_people.sales_person_name AS sales_person_full_name
+    sales_people.salesperson_name AS sales_person_full_name
         WITH SYNONYMS = ('salesperson', 'seller', 'rep')
         COMMENT = 'Salesperson who processed the sale',
 
@@ -258,54 +257,54 @@ DIMENSIONS (
         COMMENT = 'Product model name',
 
     -- payment, promotion, shipping, currency ---------------------------------------
-    cards.card_type AS card_type
+    payment_cards.payment_card_type AS card_type
         WITH SYNONYMS = ('payment method')
         COMMENT = 'Credit card brand',
-    offers.special_offer AS special_offer_description
+    special_offers.promotion_name AS special_offer_description
         WITH SYNONYMS = ('promotion', 'discount program')
         COMMENT = 'Special offer description',
-    offers.special_offer_type AS special_offer_type COMMENT = 'Special offer type',
-    offers.special_offer_category AS special_offer_category COMMENT = 'Special offer category',
-    ship_methods.ship_method AS ship_method_name
+    special_offers.promotion_type AS special_offer_type COMMENT = 'Special offer type',
+    special_offers.promotion_category AS special_offer_category COMMENT = 'Special offer category',
+    shipping_methods.shipping_method AS ship_method_name
         WITH SYNONYMS = ('carrier', 'shipping method')
         COMMENT = 'Shipping method',
-    rates.from_currency AS from_currency_code COMMENT = 'Source currency of the exchange rate',
-    rates.to_currency AS to_currency_code COMMENT = 'Target currency of the exchange rate'
+    currency_rates.source_currency AS from_currency_code COMMENT = 'Source currency of the exchange rate',
+    currency_rates.target_currency AS to_currency_code COMMENT = 'Target currency of the exchange rate'
 )
 
 METRICS (
-    items.total_sales AS SUM(items.line_total_fact)
+    order_lines.total_sales AS SUM(order_lines.line_total_fact)
         WITH SYNONYMS = ('revenue', 'sales', 'net sales', 'sales amount')
         COMMENT = 'Net sales: sum of line totals after discount. Excludes tax and freight',
-    items.total_quantity AS SUM(items.order_qty_fact)
+    order_lines.total_quantity AS SUM(order_lines.order_qty_fact)
         WITH SYNONYMS = ('units sold', 'quantity')
         COMMENT = 'Total units sold',
-    items.gross_sales AS SUM(items.order_qty_fact * items.unit_price_fact)
+    order_lines.gross_sales AS SUM(order_lines.order_qty_fact * order_lines.unit_price_fact)
         COMMENT = 'Sales before discount: quantity times list unit price',
-    items.total_discount AS SUM(items.order_qty_fact * items.unit_price_fact * items.unit_price_discount_fact)
+    order_lines.total_discount AS SUM(order_lines.order_qty_fact * order_lines.unit_price_fact * order_lines.unit_price_discount_fact)
         WITH SYNONYMS = ('discount amount')
         COMMENT = 'Discount given: quantity times unit price times discount fraction',
-    items.total_tax AS SUM(items.tax_amt_fact)
+    order_lines.total_tax AS SUM(order_lines.tax_amt_fact)
         WITH SYNONYMS = ('tax')
         COMMENT = 'Total tax on orders',
-    items.total_freight AS SUM(items.freight_fact)
+    order_lines.total_freight AS SUM(order_lines.freight_fact)
         WITH SYNONYMS = ('shipping cost', 'freight cost')
         COMMENT = 'Total freight on orders',
-    items.order_count AS COUNT(DISTINCT items.sales_order_id)
+    order_lines.order_count AS COUNT(DISTINCT order_lines.sales_order_id)
         WITH SYNONYMS = ('number of orders', 'orders')
         COMMENT = 'Number of distinct sales orders',
-    items.line_count AS COUNT(CASE WHEN items.is_order_charge = FALSE THEN items.order_lines_key END)
+    order_lines.line_count AS COUNT(CASE WHEN order_lines.is_order_charge = FALSE THEN order_lines.order_lines_key END)
         WITH SYNONYMS = ('number of lines', 'order lines')
         COMMENT = 'Number of product order lines. Excludes tax and freight charge rows',
-    items.average_unit_price AS AVG(items.unit_price_fact)
+    order_lines.average_unit_price AS AVG(order_lines.unit_price_fact)
         COMMENT = 'Average list unit price per order line',
-    items.customer_count AS COUNT(DISTINCT items.customer_key)
+    order_lines.customer_count AS COUNT(DISTINCT order_lines.customer_key)
         WITH SYNONYMS = ('number of customers', 'buyers')
         COMMENT = 'Number of distinct customers who ordered'
 )
 
 COMMENT = 'Sales semantic view: order lines, tax and freight with customers, territories, salespeople, promotions and shipping. Source of truth for sales metrics in Cortex Analyst.'
 
-AI_SQL_GENERATION 'Total sales, revenue and net sales mean total_sales, which sums line totals after discount and excludes tax and freight. Use total_tax and total_freight for those amounts. Charge rows (is_order_charge = TRUE) hold only tax and freight, so never count them as order lines; use line_count for lines and order_count for orders. A salesperson is the person who processed the sale, not the store account manager. Online orders have no salesperson. Round currency amounts to 2 decimal places. For product rankings use product_name with total_sales; charge rows have no product and carry no line sales. For any top-N or ranking, exclude rows where the ranked measure is NULL (or where the dimension is Not Applicable or Missing) and order with NULLS LAST. A store is a reseller customer; individual customers have the store Not Applicable, so exclude it from store rankings. Store data is versioned, so group stores by store_id and store_name, and never use store_account_manager when the user asks who sold. Use the order date calendar (order_year, order_quarter, order_month, order_month_name) unless the user mentions the ship date or due date, then use ship_year or due_year. Do not add a date filter unless the user asks for a period, and do not assume what the current or last year is: the data covers 2022 to 2025, so for relative periods use the latest order_year available. When asked about trends, group by order_year and order_month.'
+AI_SQL_GENERATION 'Total sales, revenue and net sales mean total_sales, which sums line totals after discount and excludes tax and freight. Use total_tax and total_freight for those amounts. Charge rows (is_order_charge = TRUE) hold only tax and freight, so never count them as order lines; use line_count for lines and order_count for orders. A salesperson is the person who processed the sale, not the store account manager. Online orders have no salesperson. Round currency amounts to 2 decimal places. For product rankings use product_name with total_sales; charge rows have no product and carry no line sales. For any top-N or ranking, exclude rows where the ranked measure is NULL (or where the dimension is Not Applicable or Missing) and order with NULLS LAST. A store is a reseller customer; individual customers have the store Not Applicable, so exclude it from store rankings. Store data is versioned, so group stores by store_id and store_name, and never use store_account_manager when the user asks who sold. Use the order date calendar (order_year, order_quarter, order_month_number, order_month_name) unless the user mentions the ship date or due date, then use ship_date_year or due_date_year. Do not add a date filter unless the user asks for a period, and do not assume what the current or last year is: the data covers 2022 to 2025, so for relative periods use the latest order_year available. When asked about trends, group by order_year and order_month_number.'
 
 AI_QUESTION_CATEGORIZATION 'This view answers questions about sales orders: sales amounts, quantities, discounts, tax, freight, customers, territories, salespeople, promotions, payment cards and shipping. Product cost, inventory, production, purchasing, finance and HR questions are out of scope; say they cannot be answered from this view. Product names, numbers, categories and subcategories are available for slicing sales. Store names, types, specialties, sizes and account managers are available for slicing sales, and so are order, due and ship dates by year, quarter, month and weekday. If the question is ambiguous about the measure (for example just "how much"), ask whether the user means net sales, quantity or order count.'
