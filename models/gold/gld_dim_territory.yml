@@ -2,6 +2,8 @@ version: 2
 
 models:
   - name: gld_dim_territory
+    semantic_model:
+      enabled: true
     description: >
         Gold dimension of AdventureWorks sales territories. SCD Type 1 (dbt incremental, merge
         on territory_id): one row per territory (10), attributes overwritten in place. Straight
@@ -16,6 +18,9 @@ models:
 
       # --- keys ------------------------------------------------------------
       - name: territory_key
+        entity:
+          type: primary
+          name: territory
         description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over territory_id."
         data_tests:
           - unique
@@ -29,14 +34,20 @@ models:
 
       # --- territory ---------------------------------------------------------
       - name: territory_name
+        dimension:
+          type: categorical
         description: "Name of the sales territory."
         data_tests: [not_null]
 
       - name: country_region_code
+        dimension:
+          type: categorical
         description: "ISO country/region code for the territory."
         data_tests: [not_null]
 
       - name: territory_group
+        dimension:
+          type: categorical
         description: "Geographic group this territory belongs to (Europe, North America, Pacific)."
 
       # --- audit ---------------------------------------------------------------

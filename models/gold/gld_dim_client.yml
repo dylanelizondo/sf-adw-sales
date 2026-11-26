@@ -2,6 +2,28 @@ version: 2
 
 models:
   - name: gld_dim_client
+    semantic_model:
+      enabled: true
+    agg_time_dimension: client_modified_date
+    metrics:
+      - name: client_count
+        label: Client count
+        description: "Registered clients (individuals plus stores), whether or not they ordered. Do not combine with order, date or product dimensions."
+        type: simple
+        agg: count_distinct
+        expr: "case when client_type in ('INDIVIDUAL', 'STORE') then client_key end"
+      - name: individual_client_count
+        label: Individual client count
+        description: "Registered individual (person) clients, whether or not they ordered."
+        type: simple
+        agg: count_distinct
+        expr: "case when client_type = 'INDIVIDUAL' then client_key end"
+      - name: store_client_count
+        label: Store client count
+        description: "Registered store (reseller) clients, whether or not they ordered."
+        type: simple
+        agg: count_distinct
+        expr: "case when client_type = 'STORE' then client_key end"
     description: >
         Gold dimension of AdventureWorks clients. One row per customer (19,820, equal to
         slv_adventure_works_sales__customer) plus the 2 default rows (-1 Missing, -2 Not
@@ -67,6 +89,9 @@ models:
 
       # --- keys ------------------------------------------------------------
       - name: client_key
+        entity:
+          type: primary
+          name: client
         description: "PK. Surrogate key minted here with dbt_utils.generate_surrogate_key over customer_id (silver carries no key of its own). The fact recomputes the same hash from customer_id."
         data_tests:
           - unique
@@ -80,6 +105,8 @@ models:
 
       # --- client --------------------------------------------------------------
       - name: client_type
+        dimension:
+          type: categorical
         description: "Client classification from silver. INDIVIDUAL when only a person is set, STORE when a store is set (a store wins over a person for the 635 ambiguous rows), UNKNOWN when neither is set."
         data_tests:
           - not_null
@@ -88,6 +115,8 @@ models:
                 values: ["INDIVIDUAL", "STORE", "UNKNOWN"]
 
       - name: client_name
+        dimension:
+          type: categorical
         description: "Display name: the store name for STORE clients, the person's full name for INDIVIDUAL clients, 'Unknown' when neither is available (the dim_client__every_client_has_a_name test fails if that happens). Contains personal names for individuals."
 
       - name: client_account_number
@@ -98,15 +127,21 @@ models:
         description: "True when the individual's survey holds real answers rather than an empty form. Null for stores."
 
       - name: client_age_band
+        dimension:
+          type: categorical
         description: "Banded age derived from the survey birth date; the raw birth date is not exposed. Self-reported. Individuals with a survey only."
 
       - name: client_education
+        dimension:
+          type: categorical
         description: "Highest education band reached, from Partial High School to Graduate Degree. Self-reported."
 
       - name: client_education_sort
         description: "Display order for client_education, 1 to 5."
 
       - name: client_occupation
+        dimension:
+          type: categorical
         description: "Occupation category: Clerical, Manual, Skilled Manual, Professional or Management. Self-reported."
 
       - name: client_total_children
@@ -116,6 +151,8 @@ models:
         description: "Number of cars owned. Self-reported."
 
       - name: client_is_home_owner
+        dimension:
+          type: categorical
         description: "Home ownership. Self-reported."
 
       # --- foreign keys ------------------------------------------------------------
@@ -137,4 +174,7 @@ models:
 
       # --- audit -------------------------------------------------------------
       - name: client_modified_date
+        granularity: day
+        dimension:
+          type: time
         description: "Last change to the customer record in the source system."

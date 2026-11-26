@@ -2,6 +2,8 @@ version: 2
 
 models:
   - name: gld_dim_currency_rate
+    semantic_model:
+      enabled: true
     description: >
         Gold dimension of AdventureWorks exchange rates. SCD Type 1 (dbt incremental, merge on
         currency_rate_id): one row per rate, that is a currency pair on a date, attributes
@@ -16,6 +18,9 @@ models:
 
       # --- keys ------------------------------------------------------------
       - name: currency_rate_key
+        entity:
+          type: primary
+          name: currency_rate
         description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over currency_rate_id. The fact recomputes the same hash from currency_rate_id. The default rows carry the literal text 'Missing' (-1) and 'Not Applicable' (-2)."
         data_tests:
           - unique
@@ -32,9 +37,13 @@ models:
         description: "Date the rate was published. 1900-01-01 on the default rows."
 
       - name: from_currency_code
+        dimension:
+          type: categorical
         description: "ISO code of the currency converted from. Short text on the default rows ('-1' / '-2'), because it does not fit 'Missing' / 'Not Applicable'."
 
       - name: to_currency_code
+        dimension:
+          type: categorical
         description: "ISO code of the currency converted to. Short text on the default rows ('-1' / '-2')."
 
       - name: average_rate

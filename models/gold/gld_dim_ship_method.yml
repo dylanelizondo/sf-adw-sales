@@ -2,6 +2,8 @@ version: 2
 
 models:
   - name: gld_dim_ship_method
+    semantic_model:
+      enabled: true
     description: >
         Gold dimension of AdventureWorks shipping methods. SCD Type 1 (dbt incremental, merge on
         ship_method_id): one row per shipping method, attributes overwritten in place. Straight
@@ -16,6 +18,9 @@ models:
 
       # --- keys ------------------------------------------------------------
       - name: ship_method_key
+        entity:
+          type: primary
+          name: ship_method
         description: "PK. Surrogate key inherited from silver (md5 of ship_method_id). The default rows carry the literal text 'Missing' (-1) and 'Not Applicable' (-2)."
         data_tests:
           - unique
@@ -29,6 +34,8 @@ models:
 
       # --- shipping method ---------------------------------------------------
       - name: ship_method_name
+        dimension:
+          type: categorical
         description: "Name of the shipping method, for example XRQ - TRUCK GROUND. 'Missing' / 'Not Applicable' on the default rows."
         data_tests:
           - not_null
