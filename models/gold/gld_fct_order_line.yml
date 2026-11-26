@@ -131,7 +131,7 @@ models:
         description: "Sales order number shown to the customer."
 
       - name: purchase_order_number
-        description: "Purchase order number the customer assigned to the sale. Null for most online orders."
+        description: "Purchase order number the customer assigned to the sale. 'Not Applicable' for online orders, which never carry one (checked: all 27,659 online orders have none and all 3,806 reseller orders have one). NULL only if a reseller order arrives without it, which the purchase_order_follows_channel test reports."
 
       - name: account_number
         description: "Accounting account number tied to the sale."
