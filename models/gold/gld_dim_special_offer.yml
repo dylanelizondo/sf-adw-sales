@@ -2,6 +2,8 @@ version: 2
 
 models:
   - name: gld_dim_special_offer
+    semantic_model:
+      enabled: true
     description: >
         Gold dimension of AdventureWorks promotions. SCD Type 1 (dbt incremental, merge on
         special_offer_id): one row per promotion, attributes overwritten in place. Straight
@@ -17,6 +19,9 @@ models:
 
       # --- keys ------------------------------------------------------------
       - name: special_offer_key
+        entity:
+          type: primary
+          name: special_offer
         description: "PK. Surrogate key inherited from silver (md5 of special_offer_id). The default rows carry the literal text 'Missing' (-1) and 'Not Applicable' (-2)."
         data_tests:
           - unique
@@ -30,12 +35,18 @@ models:
 
       # --- promotion ---------------------------------------------------------
       - name: special_offer_description
+        dimension:
+          type: categorical
         description: "Description of the promotion. 'Missing' / 'Not Applicable' on the default rows."
 
       - name: special_offer_type
+        dimension:
+          type: categorical
         description: "Kind of promotion, for example Volume Discount or Seasonal Discount. 'Missing' / 'Not Applicable' on the default rows."
 
       - name: special_offer_category
+        dimension:
+          type: categorical
         description: "Who the promotion is aimed at, for example Reseller or Customer. 'Missing' / 'Not Applicable' on the default rows."
 
       - name: special_offer_discount_pct

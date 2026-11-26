@@ -2,6 +2,70 @@ version: 2
 
 models:
   - name: gld_fct_order_line
+    semantic_model:
+      enabled: true
+    agg_time_dimension: order_date
+    metrics:
+      - name: total_sales
+        label: Total sales
+        description: "Net sales (revenue): sum of line totals after discount. Excludes tax and freight."
+        type: simple
+        agg: sum
+        expr: "line_total"
+      - name: total_quantity
+        label: Total quantity
+        description: "Units sold."
+        type: simple
+        agg: sum
+        expr: "order_qty"
+      - name: gross_sales
+        label: Gross sales
+        description: "Sales before discount: quantity times list unit price."
+        type: simple
+        agg: sum
+        expr: "order_qty * unit_price"
+      - name: total_discount
+        label: Total discount
+        description: "Discount given: quantity times unit price times discount fraction."
+        type: simple
+        agg: sum
+        expr: "order_qty * unit_price * unit_price_discount"
+      - name: total_tax
+        label: Total tax
+        description: "Total tax on orders (charge rows only)."
+        type: simple
+        agg: sum
+        expr: "tax_amt"
+      - name: total_freight
+        label: Total freight
+        description: "Total freight on orders (charge rows only)."
+        type: simple
+        agg: sum
+        expr: "freight"
+      - name: order_count
+        label: Order count
+        description: "Number of distinct sales orders."
+        type: simple
+        agg: count_distinct
+        expr: "sales_order_id"
+      - name: line_count
+        label: Line count
+        description: "Number of product order lines. Excludes tax and freight charge rows."
+        type: simple
+        agg: sum
+        expr: "case when is_order_charge = false then 1 else 0 end"
+      - name: average_unit_price
+        label: Average unit price
+        description: "Average list unit price per order line."
+        type: simple
+        agg: average
+        expr: "unit_price"
+      - name: customer_count
+        label: Customer count
+        description: "Number of distinct customers who ordered."
+        type: simple
+        agg: count_distinct
+        expr: "customer_key"
     description: >
         Gold fact of AdventureWorks sales order lines. One row per order line
         (sales_order_detail_id, equal to
@@ -105,6 +169,9 @@ models:
 
       # --- keys ------------------------------------------------------------
       - name: order_lines_key
+        entity:
+          type: primary
+          name: order_line
         description: "PK. Surrogate key of the line, inherited from silver (sales_order_detail_key, md5 of sales_order_detail_id), not recomputed in gold."
         data_tests:
           - unique
@@ -123,15 +190,21 @@ models:
           - not_null
 
       - name: is_order_charge
+        dimension:
+          type: categorical
         description: "True on the single extra row per order that carries tax_amt and freight (product_key Not Applicable, NULL line measures); false on every product line."
         data_tests:
           - not_null
 
       - name: sales_order_number
+        dimension:
+          type: categorical
         description: "Sales order number shown to the customer."
 
       - name: purchase_order_number
-        description: "Purchase order number the customer assigned to the sale. Null for most online orders."
+        dimension:
+          type: categorical
+        description: "Purchase order number the customer assigned to the sale. 'Not Applicable' for online orders, which never carry one (checked: all 27,659 online orders have none and all 3,806 reseller orders have one). NULL only if a reseller order arrives without it, which the purchase_order_follows_channel test reports."
 
       - name: account_number
         description: "Accounting account number tied to the sale."
@@ -141,6 +214,9 @@ models:
 
       # --- dates: role-playing FK to adw_core's dim_date, once per role ----------------
       - name: order_date
+        granularity: day
+        dimension:
+          type: time
         description: "Date the order was placed. FK to adw_core's dim_date (role-playing: this is one of three roles the dimension plays on this fact)."
         data_tests:
           - relationships:
@@ -149,6 +225,9 @@ models:
                 field: date_key
 
       - name: due_date
+        granularity: day
+        dimension:
+          type: time
         description: "Date the delivery was promised for. FK to adw_core's dim_date (role-playing)."
         data_tests:
           - relationships:
@@ -157,6 +236,9 @@ models:
                 field: date_key
 
       - name: ship_date
+        granularity: day
+        dimension:
+          type: time
         description: "Date the order shipped. Null while it has not shipped. FK to adw_core's dim_date (role-playing) when not null -- the relationships test ignores nulls."
         data_tests:
           - relationships:
@@ -166,6 +248,9 @@ models:
 
       # --- foreign keys to conformed dimensions: surrogate keys, never ids ----------------
       - name: order_profile_key
+        entity:
+          type: foreign
+          name: order_profile
         description: "FK to dim_order_profile (junk dimension of order status, sales channel and shipped flag): the same hash dim_order_profile mints over order_profile_id, which is computed from the status code, the channel and whether ship_date is set."
         data_tests:
           - not_null
@@ -175,6 +260,9 @@ models:
                 field: order_profile_key
 
       - name: customer_key
+        entity:
+          type: foreign
+          name: client
         description: "FK to dim_client (client_key): the same hash dim_client mints over customer_id. 'Missing' when the order has no customer."
         data_tests:
           - not_null
@@ -184,6 +272,9 @@ models:
                 field: client_key
 
       - name: territory_key
+        entity:
+          type: foreign
+          name: territory
         description: "FK to dim_territory: the same hash dim_territory mints over territory_id. 'Missing' when the order has no territory."
         data_tests:
           - not_null
@@ -193,6 +284,9 @@ models:
                 field: territory_key
 
       - name: bill_to_address_key
+        entity:
+          type: foreign
+          name: address
         description: "FK to dim_address, billing role: the same hash dim_address mints over address_id. 'Missing' when the order has no billing address."
         data_tests:
           - not_null
@@ -211,6 +305,9 @@ models:
                 field: address_key
 
       - name: sales_person_key
+        entity:
+          type: foreign
+          name: sales_person
         description: "FK to dim_sales_person: the salesperson who processed the transaction, the same hash dim_sales_person mints over business_entity_id. 'Not Applicable' for online orders, which have none."
         data_tests:
           - not_null
@@ -220,6 +317,9 @@ models:
                 field: sales_person_key
 
       - name: credit_card_key
+        entity:
+          type: foreign
+          name: credit_card
         description: "FK to dim_credit_card: the same hash dim_credit_card mints over credit_card_id. 'Not Applicable' when no card was used."
         data_tests:
           - not_null
@@ -229,6 +329,9 @@ models:
                 field: credit_card_key
 
       - name: store_key
+        entity:
+          type: foreign
+          name: store
         description: "FK to dim_store (Type 2): the store VERSION in force on order_date -- the latest version that started on or before it, or the store's oldest version when the order predates them all. 'Not Applicable' when the customer is an individual with no store; 'Missing' when the customer has a store that is not in the snapshot."
         data_tests:
           - not_null
@@ -238,6 +341,9 @@ models:
                 field: store_key
 
       - name: product_key
+        entity:
+          type: foreign
+          name: product
         description: "FK to gld_dim_product (ADW_PRODUCTION project): the same hash that dimension mints over product_id. 'Missing' (its -1 row) when a product line has no product; 'Not Applicable' (its -2 row) on the order-charge row."
         data_tests:
           - not_null
@@ -247,6 +353,9 @@ models:
                 field: product_key
 
       - name: special_offer_key
+        entity:
+          type: foreign
+          name: special_offer
         description: "FK to dim_special_offer: the same hash that dimension carries over special_offer_id. 'Not Applicable' on the order-charge row, which has no product and so no promotion."
         data_tests:
           - not_null
@@ -256,6 +365,9 @@ models:
                 field: special_offer_key
 
       - name: ship_method_key
+        entity:
+          type: foreign
+          name: ship_method
         description: "FK to dim_ship_method: the same hash that dimension carries over ship_method_id. 'Missing' when the order has no shipping method."
         data_tests:
           - not_null
@@ -265,6 +377,9 @@ models:
                 field: ship_method_key
 
       - name: currency_rate_key
+        entity:
+          type: foreign
+          name: currency_rate
         description: "FK to dim_currency_rate: the same hash dim_currency_rate mints over currency_rate_id. 'Not Applicable' for sales in local currency, which have no exchange rate."
         data_tests:
           - not_null

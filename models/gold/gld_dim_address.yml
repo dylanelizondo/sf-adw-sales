@@ -2,6 +2,8 @@ version: 2
 
 models:
   - name: gld_dim_address
+    semantic_model:
+      enabled: true
     description: >
         Gold dimension of AdventureWorks addresses. SCD Type 1 (dbt incremental, merge
         on address_id): one row per address, attributes overwritten in place. Straight
@@ -17,6 +19,9 @@ models:
 
       # --- keys ------------------------------------------------------------
       - name: address_key
+        entity:
+          type: primary
+          name: address
         description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over address_id."
         data_tests:
           - unique
@@ -37,6 +42,8 @@ models:
         description: "Second line of the street address, when present."
 
       - name: city
+        dimension:
+          type: categorical
         description: "City of the address."
         data_tests: [not_null]
 
@@ -52,9 +59,13 @@ models:
         description: "State/province code."
 
       - name: state_province_name
+        dimension:
+          type: categorical
         description: "State/province name."
 
       - name: country_region_code
+        dimension:
+          type: categorical
         description: "ISO country/region code of the state/province."
 
       - name: territory_id

@@ -254,7 +254,12 @@ select
     i.sales_order_id,
     i.is_order_charge,
     i.sales_order_number,
-    i.purchase_order_number,
+    -- online orders never carry a purchase order (Not Applicable); a reseller order without one
+    -- is a missing value, so it stays NULL and the purchase_order_follows_channel test reports it
+    case
+        when i.is_online_order and i.purchase_order_number is null then '{{ default_row_text(1) }}'
+        else i.purchase_order_number
+    end                                                              as purchase_order_number,
     i.account_number,
     i.revision_number,
 

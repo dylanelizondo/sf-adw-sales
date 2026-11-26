@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: metricflow_time_spine
+    description: "Daily calendar for MetricFlow, selected from adw_core's gld_dim_date. Required by the dbt Semantic Layer."
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        description: "Calendar day."
+        granularity: day
+        data_tests:
+          - unique
+          - not_null
