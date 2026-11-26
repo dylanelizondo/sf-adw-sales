@@ -2,6 +2,8 @@ version: 2
 
 models:
   - name: gld_dim_credit_card
+    semantic_model:
+      enabled: true
     description: >
         Gold dimension of AdventureWorks credit cards. SCD Type 1 (dbt incremental, merge on
         credit_card_id): one row per card, attributes overwritten in place. Straight select from
@@ -48,6 +50,9 @@ models:
 
       # --- keys ------------------------------------------------------------
       - name: credit_card_key
+        entity:
+          type: primary
+          name: credit_card
         description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over credit_card_id. The fact recomputes the same hash from credit_card_id. The default rows carry the literal text 'Missing' (-1) and 'Not Applicable' (-2)."
         data_tests:
           - unique
@@ -61,6 +66,8 @@ models:
 
       # --- card --------------------------------------------------------------
       - name: card_type
+        dimension:
+          type: categorical
         description: "Brand of the card: SuperiorCard, Distinguish, ColonialVoice or Vista. 'Missing' / 'Not Applicable' on the default rows."
         data_tests:
           - accepted_values:

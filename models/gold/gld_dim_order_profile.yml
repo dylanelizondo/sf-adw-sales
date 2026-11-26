@@ -2,6 +2,8 @@ version: 2
 
 models:
   - name: gld_dim_order_profile
+    semantic_model:
+      enabled: true
     description: >
         Gold junk dimension of AdventureWorks orders: one row per combination of order status,
         sales channel and shipped flag found in the orders (a few dozen), plus the two default
@@ -17,6 +19,9 @@ models:
 
       # --- keys ------------------------------------------------------------
       - name: order_profile_key
+        entity:
+          type: primary
+          name: order_profile
         description: "PK. Surrogate key minted in gold with dbt_utils.generate_surrogate_key over order_profile_id."
         data_tests:
           - unique
@@ -33,13 +38,19 @@ models:
         description: "Original order status: 1 in process, 2 approved, 3 backordered, 4 rejected, 5 shipped, 6 cancelled."
 
       - name: order_status_label
+        dimension:
+          type: categorical
         description: "Human-readable order status, decoded from order_status_code."
 
       - name: is_online_order
         description: "True when the order was placed online, false when a salesperson placed it."
 
       - name: order_channel
+        dimension:
+          type: categorical
         description: "Sales channel, Online or Salesperson."
 
       - name: is_shipped
+        dimension:
+          type: categorical
         description: "True when the order has a ship date."
